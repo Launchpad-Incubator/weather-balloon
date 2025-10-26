@@ -1,0 +1,49 @@
+name: Issue Management Automation
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
+
+jobs:
+  # Job 1: Auto-close issues labeled "duplicate"
+  auto-close-duplicate:
+    runs-on: ubuntu-latest
+    name: Auto-close Duplicate Issues
+    # Run only when an issue is labeled
+    if: github.event.action == 'labeled' && github.event.label.name == 'duplicate'
+    steps:
+      - name: Close duplicate issue
+        uses: peaceiris/actions-label-commenter@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          config_file: .github/label-commenter.yml
+          
+  # Job 2: Auto-add issues labeled "roadmap" to project
+  add-to-project:
+    runs-on: ubuntu-latest
+    name: Add 'roadmap' issues to Project
+    # Run only when an issue is labeled 'roadmap'
+    if: github.event.action == 'labeled' && github.event.label.name == 'roadmap'
+    steps:
+      - name: Add issue to project
+        uses: actions/add-to-project@v0.5.0
+        with:
+          # Updated project URL
+          project-url: "https://github.com/orgs/Launchpad-Incubator/projects/6"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 3: Auto-close issues labeled "status done"
+  auto-close-done:
+    runs-on: ubuntu-latest
+    name: Auto-close Done Issues
+    # Run only when an issue is labeled 'status done'
+    if: github.event.action == 'labeled' && github.event.label.name == 'status done'
+    steps:
+      - name: Close issue as completed
+        uses: peter-evans/close-issue@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          comment: "This issue has been marked with 'status done' and is now being automatically closed as completed."
+          # Closes the issue as 'completed' (vs. 'not_planned')
+          close-reason: "completed"
