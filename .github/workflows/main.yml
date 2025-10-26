@@ -4,6 +4,9 @@ on:
   issues:
     types: [labeled] # We only care about when issues are labeled
 
+permissions:
+  issues: write
+
 jobs:
   # Job 1: Auto-close issues labeled "duplicate"
   auto-close-duplicate:
