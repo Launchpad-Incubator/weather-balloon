@@ -1,0 +1,5 @@
+- name: "duplicate"
+  labeled:
+    issue:
+      body: "This issue appears to be a duplicate and is being closed automatically."
+      action: "close"
