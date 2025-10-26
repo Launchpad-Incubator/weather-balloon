@@ -33,7 +33,7 @@ jobs:
       - name: Add issue to project
         uses: actions/add-to-project@v0.5.0
         with:
-          project-url: "https://github.com/orgs/Launchpad-Incubator/projects/6"
+          project-url: "https://github.com/orgs/Launchpad-Incubator/projects/7"
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   # Job 3: Auto-close issues labeled "status done"
