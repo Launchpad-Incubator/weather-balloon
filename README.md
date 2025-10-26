@@ -4,4 +4,4 @@ This is the research repository for the Launchpad weather balloon project. Add a
 
 ## Project Links
 
-N/A (for now - put OnShape link
+N/A (for now - **put OnShape link here**!)
