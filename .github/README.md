@@ -8,4 +8,4 @@ N/A (for now - **put OnShape link here**!)
 
 ## Contributing
 
-If you have something to add - put it on the wiki or send a pull request! Be sure to use the [formatting guide.](https://github.com/Launchpad-Incubator/weather-balloon/wiki/Example-Format)
+If you have something to add - put it on the wiki or send a pull request! Be sure to use the [formatting guide](https://github.com/Launchpad-Incubator/weather-balloon/wiki/Example-Format).
