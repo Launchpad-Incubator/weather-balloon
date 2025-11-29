@@ -8,3 +8,4 @@
 * Empty Container + Wings - 177g
 * AirTag - 11g
 * Parachute - 86g
+* Spot Trace - 91g
