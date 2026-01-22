@@ -1,1 +1,5 @@
-Pin 2: RHT03 Sensor
+VCC (3.3V power supply pin): All sensors
+GND (ground voltage): All sensors
+D2: DHT22 sensor data
+A4: BMP085 SDA
+A5: BMP085 SCL
