@@ -50,3 +50,22 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           comment: "This issue has been marked with 'status done' and is now being automatically closed as completed."
           close-reason: "completed"
+
+  # Job 4: Auto-assign issues labeled with jobs for the programmers
+  auto-assign-bug:
+    if: false
+    runs-on: ubuntu-latest
+    name: Auto-assign Bug to Lead
+    # Run only when the label 'bug' or 'code job' is added
+    if: github.event.label.name == 'bug' || github.event.label.name == 'code job'
+    steps:
+      - name: Assign user
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              assignees: ['USERNAME_HERE', 'OTHERUSERNAME'] # Assigns Tristan and Aidan the issue
+            })
