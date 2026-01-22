@@ -53,7 +53,6 @@ jobs:
 
   # Job 4: Auto-assign issues labeled with jobs for the programmers
   auto-assign-bug:
-    if: false
     runs-on: ubuntu-latest
     name: Auto-assign Bug to Lead
     # Run only when the label 'bug' or 'code job' is added
@@ -67,5 +66,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              assignees: ['USERNAME_HERE', 'OTHERUSERNAME'] # Assigns Tristan and Aidan the issue
+              assignees: ['Launchpad-Tristan', 'arduinohatesme'] # Assigns Tristan and Aidan the issue
             })
