@@ -12,19 +12,16 @@
 /*
  Get Relative Humidity and Temperature from the RHT03
  Get pressure, altitude, and temperature from the BMP085.
- Display it on a Nokia display
  */
 
 #include <Wire.h>  // Use the internal I2C Library
 #include <dht.h>  // Use the DHT Relative Humidity Library
-#include <LCD5110_Basic.h>    // Use the Nokia 5110 LCD Library
 
 #define BMP085_ADDRESS 0x77  // I2C address of BMP085
 
 dht DHT;  // Define the DHT object
 #define DHT22_PIN 2  // Set the I/O pin used for the RHT03 Sensor
 
-LCD5110 glcd(12,11,10,8,9);  // Set the I/O pins used by the Nokia display
 extern uint8_t SmallFont[];  // Define the Small Font for the Nokika display
 
 const unsigned char OSS = 0;  // Oversampling Setting for the BMP085
@@ -44,14 +41,7 @@ void setup()
 {
   Wire.begin();  // Start the I2C Interface
   
-  glcd.InitLCD(65);  // Initialize the Nokia 5110 Display, set the Contrast to 65 
-  glcd.setFont(SmallFont);  // Set the Font to Small Font
-  glcd.print("KW5GP", CENTER, 0);  // Display the Startup screen
-  glcd.print("Weather", CENTER, 8);
-  glcd.print("Station", CENTER,16);
-  glcd.print("Initializing", CENTER,32);
   delay(3000);
-  glcd.clrScr();  // Clear the LCD screen
   
   bmp085Calibration();  // Run the BMP085 Calibration Function
 
@@ -68,30 +58,23 @@ void loop()
   switch (chk)
   {
     case DHTLIB_OK: 
-      // Display the RH Data if it's a valid read
-      glcd.printNumF(DHT.humidity,1,30,16);
-      glcd.print("%     ",55,16);
+      // getting the temperature
       centigrade = DHT.temperature;
-      fahrenheit = (centigrade * 1.8) + 32;   // convert to Fahrenheit
-      glcd.printNumF(fahrenheit,1,30,24); 
-      glcd.print("F",55,24); 
+      fahrenheit = (centigrade * 1.8) + 32;   // convert to Fahrenheit 
       break;
 
-    case DHTLIB_ERROR_CHECKSUM: 
-      glcd.print("CK Error",25,16); 
+    case DHTLIB_ERROR_CHECKSUM:  
+      // come up with ways to state that an error happened and log it
       break;
       
     case DHTLIB_ERROR_TIMEOUT: 
-      glcd.print("T/O Error",25,16);
+      // come up with ways to state that an error happened and log it
       break;
 
     default: 
-      glcd.print("Unk Error",25,16);
+      // come up with ways to state that an error happened and log it
       break;
   }
-
-  // Now Read and Display the Pressure  
-  glcd.print("Press: ",0,40);
   
   float temperature = bmp085GetTemperature(bmp085ReadUT()); //MUST be called first
   float pressure = bmp085GetPressure(bmp085ReadUP());
@@ -101,7 +84,7 @@ void loop()
   pressure  = pressure / 1000;  // Convert to KiloPascals
   inHg = pressure * 0.2952998016471232;  // Convert KiloPascals to Inches of Mercury
 
-  glcd.printNumF(inHg,2,40,40);  // Display the Barometric Pressure in Inches of Mercury
+  // barometric pressure in inches of mercury  (inHg,2,40,40);  
 
   delay(5000); //wait 5 seconds and get values again.
 }
