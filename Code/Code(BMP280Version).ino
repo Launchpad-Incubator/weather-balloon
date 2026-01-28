@@ -31,16 +31,20 @@ struct SensorReadings {
 SensorReadings failedSensorReadings = {-200000, -200000, -200000, -200000};
 
 SensorReadings readSensors() {
-  float dhtTemp = dht.readTemperature();
-  float bmpTemp = bmp.readTemperature();
-  float humidity = dht.readHumidity();
-  if (isnan(humidity) || isnan(dhtTempC)) {
-    Serial.println("DHT sensor read failed :(");
-    return 
-  } else {
+  float dhtTemp = dht.readTemperature(); // Read DHT temperature
+  float bmpTemp = bmp.readTemperature(); // Read BMP temperature
+  float humidity = dht.readHumidity(); // Read DHT humidity
   float pressure = bmp.readPressure();
+  if (isnan(pressure)) {
+    return failedSensorReadings
+  }
   float pressureInHg = (pressure / 3386.39);
+  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity)) {
+    Serial.println("DHT sensor read failed :(");
+    return failedSensorReadings // If it fails to read, it will return an error value that the script can catch
+  } else {
   return {dhtTemp, bmpTemp, humidity, pressureInHg};
+  }
 }
 
 void setup() {
@@ -72,14 +76,15 @@ void setup() {
 
 void loop() {
   SensorReadings data = readSensors();
-  if (data.DHT_temp != -200000 && data.BMP_temp != -200000 && data.humidity != -200000 && data.pressure != -200000)
-
+  if (data.DHT_temp != -200000 && data.BMP_temp != -200000 && data.humidity != -200000 && data.pressure != -200000) { // if anything here is recieving our error value, then stop
+    Serial.print("Failed to read sensors :C");
+  } else {
     // Output to Serial Monitor
     Serial.println("---------------------------");
     Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %");
     Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
     Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
     Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
-
+  }
   delay(5000);
 }
