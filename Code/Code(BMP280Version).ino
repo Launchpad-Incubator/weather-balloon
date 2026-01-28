@@ -7,7 +7,7 @@
 #include <Adafruit_BMP280.h>
 
 // Pin Definitions for Nano ESP32
-#define DHT22_PIN 2      // Physical Label D2 (GPIO 5)
+#define DHT22_PIN D2
 #define DHTTYPE DHT22
 
 #define BMP085_ADDRESS 0x77 
@@ -20,6 +20,28 @@ int ac1, ac2, ac3, b1, b2, mb, mc, md;
 unsigned int ac4, ac5, ac6;
 long b5;
 const unsigned char OSS = 0; 
+
+struct SensorReadings {
+  float DHT_temp;
+  float BMP_temp;
+  float humidity;
+  float pressure;
+};
+
+SensorReadings failedSensorReadings = {-200000, -200000, -200000, -200000};
+
+SensorReadings readSensors() {
+  float dhtTemp = dht.readTemperature();
+  float bmpTemp = bmp.readTemperature();
+  float humidity = dht.readHumidity();
+  if (isnan(humidity) || isnan(dhtTempC)) {
+    Serial.println("DHT sensor read failed :(");
+    return 
+  } else {
+  float pressure = bmp.readPressure();
+  float pressureInHg = (pressure / 3386.39);
+  return {dhtTemp, bmpTemp, humidity, pressureInHg};
+}
 
 void setup() {
   // ESP32 works best at higher baud rates
@@ -49,24 +71,15 @@ void setup() {
 }
 
 void loop() {
-  float humidity = dht.readHumidity();
-  float dhtTempC = dht.readTemperature(); // Temp from DHT22
-  
-  if (isnan(humidity) || isnan(dhtTempC)) {
-    Serial.println("Failed to read from DHT sensor!");
-  } else {
-    // Read BMP280 Data using library functions
-    float bmpTempC = bmp.readTemperature();
-    float pressurePa = bmp.readPressure();
-    float inHg = (pressurePa / 3386.39); // Correct conversion to inHg
+  SensorReadings data = readSensors();
+  if (data.DHT_temp != -200000 && data.BMP_temp != -200000 && data.humidity != -200000 && data.pressure != -200000)
 
     // Output to Serial Monitor
     Serial.println("---------------------------");
-    Serial.print("Humidity: "); Serial.print(humidity); Serial.println(" %");
-    Serial.print("DHT22 Temp: "); Serial.print((dhtTempC * 1.8) + 32); Serial.println(" F");
-    Serial.print("Pressure: "); Serial.print(inHg); Serial.println(" inHg");
-    Serial.print("BMP280 Temp: "); Serial.print((bmpTempC * 1.8) + 32); Serial.println(" F");
-  }
+    Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %");
+    Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
+    Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
+    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
 
   delay(5000);
 }
