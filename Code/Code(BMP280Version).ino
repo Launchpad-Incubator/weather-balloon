@@ -20,7 +20,8 @@ struct SensorReadings {
   float pressure;
 };
 
-SensorReadings failedSensorReadings = {-200000, -200000, -200000, -200000}; // Values for error catching that shouldn't ever show up in real cases
+const float ERR_VAL = -9999.0;
+SensorReadings failedSensorReadings = {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL}; // Values for error catching that shouldn't ever show up in real cases
 
 SensorReadings readSensors() { // we state here that it returns a SensorReadings structure
   float dhtTemp = dht.readTemperature(); // Read DHT temperature
@@ -28,17 +29,15 @@ SensorReadings readSensors() { // we state here that it returns a SensorReadings
   float humidity = dht.readHumidity(); // Read DHT humidity
   float pressure = bmp.readPressure(); // Read BMP pressure
   float pressureInHg = -200000;
-  if (isnan(pressure)) {
+
+  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
+    Serial.println("Sensor hardware read failed!");
     return failedSensorReadings;
-  } else {
-    float pressureInHg = (pressure / 3386.39); // avoid running this if the value doesn't get returned, as math on a null value would cause the program to crash during runtime
   }
-  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity)) {
-    Serial.println("DHT sensor read failed :(");
-    return failedSensorReadings; // If it fails to read, it will return an error value that the script can catch
-  } else {
+  
+  pressureInHg = (pressure / 3386.39); // avoid running this if the value doesn't get returned, as math on a null value would cause the program to crash during runtime
   return {dhtTemp, bmpTemp, humidity, pressureInHg}; // Sensor Readings tuple with values in the order of: tempFromDHT, tempFromBMP, humidityFromDHT, pressureInHgFromBMP
-  }
+
 }
 
 void setup() {
