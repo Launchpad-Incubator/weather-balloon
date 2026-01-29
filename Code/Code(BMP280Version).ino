@@ -10,16 +10,8 @@
 #define DHT22_PIN D2
 #define DHTTYPE DHT22
 
-#define BMP085_ADDRESS 0x77 
-
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
-
-// BMP085 Calibration variables
-int ac1, ac2, ac3, b1, b2, mb, mc, md;
-unsigned int ac4, ac5, ac6;
-long b5;
-const unsigned char OSS = 0; 
 
 struct SensorReadings {
   float DHT_temp;
@@ -41,7 +33,7 @@ SensorReadings readSensors() {
   float pressureInHg = (pressure / 3386.39);
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity)) {
     Serial.println("DHT sensor read failed :(");
-    return failedSensorReadings // If it fails to read, it will return an error value that the script can catch
+    return failedSensorReadings; // If it fails to read, it will return an error value that the script can catch
   } else {
   return {dhtTemp, bmpTemp, humidity, pressureInHg};
   }
