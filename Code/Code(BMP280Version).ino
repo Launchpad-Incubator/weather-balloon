@@ -71,14 +71,14 @@ void setup() {
 void loop() {
   SensorReadings data = readSensors();
   if (data.DHT_temp != -200000 && data.BMP_temp != -200000 && data.humidity != -200000 && data.pressure != -200000) { // if anything here is recieving our error value, then stop
-    Serial.print("Failed to read sensors :C");
-  } else {
     // Output to Serial Monitor
     Serial.println("---------------------------");
     Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %"); // since it's using our SensorReadings structure, you can just use value.humidity
     Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
     Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
     Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
+  } else {
+    Serial.print("Failed to read sensors :C");
   }
   delay(5000);
 }
