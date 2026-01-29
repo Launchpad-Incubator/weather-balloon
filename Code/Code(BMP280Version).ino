@@ -31,7 +31,7 @@ SensorReadings readSensors() { // we state here that it returns a SensorReadings
   float pressureInHg = -200000;
 
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
-    Serial.println("Sensor hardware read failed!");
+    Serial.println("Roh no, I can't find the sensor readings ˙◠˙");
     return failedSensorReadings;
   }
   
