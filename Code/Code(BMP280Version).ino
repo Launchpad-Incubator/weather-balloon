@@ -26,16 +26,16 @@ SensorReadings readSensors() {
   float dhtTemp = dht.readTemperature(); // Read DHT temperature
   float bmpTemp = bmp.readTemperature(); // Read BMP temperature
   float humidity = dht.readHumidity(); // Read DHT humidity
-  float pressure = bmp.readPressure();
+  float pressure = bmp.readPressure(); // Read BMP pressure
   if (isnan(pressure)) {
-    return failedSensorReadings
+    return failedSensorReadings;
   }
   float pressureInHg = (pressure / 3386.39);
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity)) {
     Serial.println("DHT sensor read failed :(");
     return failedSensorReadings; // If it fails to read, it will return an error value that the script can catch
   } else {
-  return {dhtTemp, bmpTemp, humidity, pressureInHg};
+  return {dhtTemp, bmpTemp, humidity, pressureInHg}; // Sensor Readings tuple with values in the order of: tempFromDHT, tempFromBMP, humidityFromDHT, pressureInHgFromBMP
   }
 }
 
@@ -73,7 +73,7 @@ void loop() {
   } else {
     // Output to Serial Monitor
     Serial.println("---------------------------");
-    Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %");
+    Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %"); // since it's using our SensorReadings structure, you can just use value.humidity
     Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
     Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
     Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
