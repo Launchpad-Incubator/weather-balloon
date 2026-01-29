@@ -51,9 +51,9 @@ void setup() {
   dht.begin();
 
   if (!bmp.begin(0x76)) {
-    Serial.println("Could not find a valid BMP280 sensor at 0x76, trying 0x77...");
+    Serial.println("Could not find a valid BMP280 sensor at 0x76, trying 0x77... :|");
     if (!bmp.begin(0x77)) {
-      Serial.println("Check wiring! Could not find BMP280.");
+      Serial.println("Aw snap, I can't find a BMP280 sensor D:");
       while (1);
     }
   }
@@ -64,7 +64,7 @@ void setup() {
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
 
-  Serial.println("Sensors Initialized.");
+  Serial.println("Sensors Initialized. Yipee :P");
 }
 
 void loop() {
@@ -73,9 +73,9 @@ void loop() {
     // Output to Serial Monitor
     Serial.println("---------------------------");
     Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %"); // since it's using our SensorReadings structure, you can just use value.humidity
-    Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
+    Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F"); // farenheit conversion
     Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
-    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
+    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F"); // convert temp to farenheit as well
   } else {
     Serial.print("Failed to read sensors :C");
   }
