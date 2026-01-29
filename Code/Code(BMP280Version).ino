@@ -20,17 +20,19 @@ struct SensorReadings {
   float pressure;
 };
 
-SensorReadings failedSensorReadings = {-200000, -200000, -200000, -200000};
+SensorReadings failedSensorReadings = {-200000, -200000, -200000, -200000}; // Values for error catching that shouldn't ever show up in real cases
 
-SensorReadings readSensors() {
+SensorReadings readSensors() { // we state here that it returns a SensorReadings structure
   float dhtTemp = dht.readTemperature(); // Read DHT temperature
   float bmpTemp = bmp.readTemperature(); // Read BMP temperature
   float humidity = dht.readHumidity(); // Read DHT humidity
   float pressure = bmp.readPressure(); // Read BMP pressure
+  float pressureInHg = -200000;
   if (isnan(pressure)) {
     return failedSensorReadings;
+  } else {
+    float pressureInHg = (pressure / 3386.39); // avoid running this if the value doesn't get returned, as math on a null value would cause the program to crash during runtime
   }
-  float pressureInHg = (pressure / 3386.39);
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity)) {
     Serial.println("DHT sensor read failed :(");
     return failedSensorReadings; // If it fails to read, it will return an error value that the script can catch
