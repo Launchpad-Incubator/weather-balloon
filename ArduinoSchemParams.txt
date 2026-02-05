@@ -3,3 +3,4 @@ GND (ground voltage): All sensors
 D2: DHT22 sensor data
 A4: BMP085 SDA
 A5: BMP085 SCL
+LED PINS: RGB LED (built in)
