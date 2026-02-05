@@ -1,3 +1,5 @@
+//LED STUFF: Green = Good, Yellow = Booting, Orange = Failed sensor read, Red = Hardware problem
+
 #include <Wire.h>
 #include <DHT.h>           
 #include <Adafruit_Sensor.h>
@@ -7,7 +9,7 @@
 #define DHT22_PIN D2
 #define DHTTYPE DHT22
 
-// --- Enum for System State ---
+// Enum for state
 enum SystemState {
   BOOTING,      // Yellow/Orange
   SYSTEM_OK,    // Green
@@ -17,7 +19,7 @@ enum SystemState {
 
 SystemState currentState = BOOTING;
 
-// --- Data Structures ---
+// Data stuff
 struct SensorReadings {
   float DHT_temp;
   float BMP_temp;
@@ -27,33 +29,32 @@ struct SensorReadings {
 
 const float ERR_VAL = -9999.0;
 
-// Initialize Sensors
+// Sensor Init
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
 
-// --- LED Control Function (Inverted Logic for Built-in LED) ---
+// LED Logic--
 void setBuiltInLED(SystemState state) {
-  // On Nano ESP32 built-in LED: 0 = Full Brightness, 255 = OFF
   switch (state) {
     case BOOTING:     
-      analogWrite(LED_RED, 0);    // Red ON
-      analogWrite(LED_GREEN, 50); // Green Half-ON (creates Orange/Yellow)
-      analogWrite(LED_BLUE, 255);  // Blue OFF
+      analogWrite(LED_RED, 0);    
+      analogWrite(LED_GREEN, 50); 
+      analogWrite(LED_BLUE, 255);  
       break;
     case SYSTEM_OK:   
-      analogWrite(LED_RED, 255);   // Red OFF
-      analogWrite(LED_GREEN, 0);   // Green ON
-      analogWrite(LED_BLUE, 255);  // Blue OFF
+      analogWrite(LED_RED, 255);   
+      analogWrite(LED_GREEN, 0);   
+      analogWrite(LED_BLUE, 255);  
       break;
     case READ_ERROR:  
-      analogWrite(LED_RED, 0);    // Red ON
-      analogWrite(LED_GREEN, 150); // Green Half-ON (creates Orange/Yellow)
-      analogWrite(LED_BLUE, 255);  // Blue OFF
+      analogWrite(LED_RED, 0);    
+      analogWrite(LED_GREEN, 150); 
+      analogWrite(LED_BLUE, 255);  
       break;
     case HARDWARE_FIX: 
-      analogWrite(LED_RED, 0);     // Red ON
-      analogWrite(LED_GREEN, 255); // Green OFF
-      analogWrite(LED_BLUE, 255);  // Blue OFF
+      analogWrite(LED_RED, 0);     
+      analogWrite(LED_GREEN, 255); 
+      analogWrite(LED_BLUE, 255);  
       break;
   }
 }
