@@ -11,10 +11,10 @@
 
 // Enum for state
 enum SystemState {
-  BOOTING,      // Yellow/Orange
-  SYSTEM_OK,    // Green
-  READ_ERROR,   // Red
-  HARDWARE_FIX  // Solid Red (Critical)
+  BOOTING,      // Yellow (booting)
+  SYSTEM_OK,    // Green (all good)
+  READ_ERROR,   // Orange (failed sensor read)
+  HARDWARE_FIX  // Red (missing sensors)
 };
 
 SystemState currentState = BOOTING;
@@ -38,7 +38,7 @@ void setBuiltInLED(SystemState state) {
   switch (state) {
     case BOOTING:     
       analogWrite(LED_RED, 0);    
-      analogWrite(LED_GREEN, 50); 
+      analogWrite(LED_GREEN, 0); 
       analogWrite(LED_BLUE, 255);  
       break;
     case SYSTEM_OK:   
