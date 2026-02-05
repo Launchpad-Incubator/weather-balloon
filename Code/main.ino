@@ -1,18 +1,23 @@
-// Arduino Weather Station for Nano ESP32
-// Original by Glen Popiel - KW5GP | Adapted for ESP32 (Serial Only)
-
 #include <Wire.h>
-#include <DHT.h>           // Use "DHT sensor library" by Adafruit
+#include <DHT.h>           
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
 
-// Pin Definitions for Nano ESP32
+// --- Definitions ---
 #define DHT22_PIN D2
 #define DHTTYPE DHT22
 
-DHT dht(DHT22_PIN, DHTTYPE);
-Adafruit_BMP280 bmp;
+// --- Enum for System State ---
+enum SystemState {
+  BOOTING,      // Yellow/Orange
+  SYSTEM_OK,    // Green
+  READ_ERROR,   // Red
+  HARDWARE_FIX  // Solid Red (Critical)
+};
 
+SystemState currentState = BOOTING;
+
+// --- Data Structures ---
 struct SensorReadings {
   float DHT_temp;
   float BMP_temp;
@@ -21,63 +26,102 @@ struct SensorReadings {
 };
 
 const float ERR_VAL = -9999.0;
-SensorReadings failedSensorReadings = {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL}; // Values for error catching that shouldn't ever show up in real cases
 
-SensorReadings readSensors() { // we state here that it returns a SensorReadings structure
-  float dhtTemp = dht.readTemperature(); // Read DHT temperature
-  float bmpTemp = bmp.readTemperature(); // Read BMP temperature
-  float humidity = dht.readHumidity(); // Read DHT humidity
-  float pressure = bmp.readPressure(); // Read BMP pressure
-  float pressureInHg = -200000;
+// Initialize Sensors
+DHT dht(DHT22_PIN, DHTTYPE);
+Adafruit_BMP280 bmp;
 
-  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
-    Serial.println("Roh no, I can't find the sensor readings ˙◠˙");
-    return failedSensorReadings;
+// --- LED Control Function (Inverted Logic for Built-in LED) ---
+void setBuiltInLED(SystemState state) {
+  // On Nano ESP32 built-in LED: 0 = Full Brightness, 255 = OFF
+  switch (state) {
+    case BOOTING:     
+      analogWrite(LED_RED, 0);    // Red ON
+      analogWrite(LED_GREEN, 50); // Green Half-ON (creates Orange/Yellow)
+      analogWrite(LED_BLUE, 255);  // Blue OFF
+      break;
+    case SYSTEM_OK:   
+      analogWrite(LED_RED, 255);   // Red OFF
+      analogWrite(LED_GREEN, 0);   // Green ON
+      analogWrite(LED_BLUE, 255);  // Blue OFF
+      break;
+    case READ_ERROR:  
+      analogWrite(LED_RED, 0);    // Red ON
+      analogWrite(LED_GREEN, 150); // Green Half-ON (creates Orange/Yellow)
+      analogWrite(LED_BLUE, 255);  // Blue OFF
+      break;
+    case HARDWARE_FIX: 
+      analogWrite(LED_RED, 0);     // Red ON
+      analogWrite(LED_GREEN, 255); // Green OFF
+      analogWrite(LED_BLUE, 255);  // Blue OFF
+      break;
   }
-  
-  pressureInHg = (pressure / 3386.39); // avoid running this if the value doesn't get returned, as math on a null value would cause the program to crash during runtime
-  return {dhtTemp, bmpTemp, humidity, pressureInHg}; // Sensor Readings tuple with values in the order of: tempFromDHT, tempFromBMP, humidityFromDHT, pressureInHgFromBMP
+}
 
+// --- Sensor Reading Logic ---
+SensorReadings readSensors() {
+  float dhtTemp = dht.readTemperature();
+  float bmpTemp = bmp.readTemperature();
+  float humidity = dht.readHumidity();
+  float pressure = bmp.readPressure();
+  
+  // Check for NaN (Not a Number) failures
+  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
+    currentState = READ_ERROR;
+    return {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL};
+  }
+
+  currentState = SYSTEM_OK;
+  float pressureInHg = (pressure / 3386.39);
+  return {dhtTemp, bmpTemp, humidity, pressureInHg};
 }
 
 void setup() {
-  // ESP32 works best at higher baud rates
-  Serial.begin(115200); 
-  while (!Serial) delay(10); // Wait for Serial Monitor to open
-  
+  Serial.begin(115200);
+  while (!Serial) delay(10);
+
+  // Initialize Built-in LED Pins
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
+  setBuiltInLED(BOOTING);
+
   Serial.println("--- Nano ESP32 Weather Station ---");
   
-  Wire.begin(); // Defaults to A4 (SDA) and A5 (SCL)
+  Wire.begin();
   dht.begin();
 
-  if (!bmp.begin(0x76)) {
-    Serial.println("Could not find a valid BMP280 sensor at 0x76, trying 0x77... :|");
-    if (!bmp.begin(0x77)) {
-      Serial.println("Aw snap, I can't find a BMP280 sensor D:");
-      while (1);
-    }
+  // Try to find the BMP280
+  if (!bmp.begin(0x76) && !bmp.begin(0x77)) {
+    Serial.println("BMP not found D:");
+    currentState = HARDWARE_FIX;
+    setBuiltInLED(HARDWARE_FIX);
+    while (1);
   }
 
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                  Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                  Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                  Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                  Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+  // BMP280 fine-tuning
+  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                  Adafruit_BMP280::SAMPLING_X2,
+                  Adafruit_BMP280::SAMPLING_X16,
+                  Adafruit_BMP280::FILTER_X16,
+                  Adafruit_BMP280::STANDBY_MS_500);
 
   Serial.println("Sensors Initialized. Yipee :P");
 }
 
 void loop() {
   SensorReadings data = readSensors();
-  if (data.DHT_temp != -200000 && data.BMP_temp != -200000 && data.humidity != -200000 && data.pressure != -200000) { // if anything here is recieving our error value, then stop
-    // Output to Serial Monitor
+  setBuiltInLED(currentState);
+
+  if (currentState == SYSTEM_OK) {
     Serial.println("---------------------------");
-    Serial.print("Humidity: "); Serial.print(data.humidity); Serial.println(" %"); // since it's using our SensorReadings structure, you can just use value.humidity
-    Serial.print("DHT22 Temp: "); Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F"); // farenheit conversion
-    Serial.print("Pressure: "); Serial.print(data.pressure); Serial.println(" inHg");
-    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F"); // convert temp to farenheit as well
+    Serial.print("Humidity: ");    Serial.print(data.humidity); Serial.println(" %");
+    Serial.print("DHT22 Temp: ");  Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
+    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
+    Serial.print("Pressure: ");    Serial.print(data.pressure); Serial.println(" inHg");
   } else {
-    Serial.print("Failed to read sensors :C");
+    Serial.println("Failed to read sensors! Check wiring. :C");
   }
+  
   delay(5000);
 }
