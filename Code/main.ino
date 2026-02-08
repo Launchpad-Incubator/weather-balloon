@@ -1,4 +1,4 @@
-//LED STUFF: Green = Good, Yellow = Booting, Orange = Failed sensor read, Red = Hardware problem
+//LED STUFF: Green = Good, Yellow = Booting, Orange = Failed sensor read, Red = Wiring/hardware problem
 
 #include <Wire.h>
 #include <DHT.h>           
