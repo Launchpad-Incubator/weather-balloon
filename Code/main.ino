@@ -4,6 +4,7 @@
 #include <DHT.h>           
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP280.h>
+#include <SoftwareSerial.h>
 
 // --- Definitions ---
 #define DHT22_PIN D2
@@ -25,6 +26,7 @@ struct SensorReadings {
   float BMP_temp;
   float humidity;
   float pressure;
+  byte GPS_Data;
 };
 
 const float ERR_VAL = -9999.0;
@@ -32,6 +34,7 @@ const float ERR_VAL = -9999.0;
 // Sensor Init
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
+SoftwareSerial ss(7, 8);
 
 // LED Logic--
 void setBuiltInLED(SystemState state) {
@@ -67,19 +70,21 @@ SensorReadings readSensors() {
   float pressure = bmp.readPressure();
   
   // Check for NaN (Not a Number) failures
-  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
+  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure) || ss.available() == 0) {
     currentState = READ_ERROR;
     return {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL};
   }
+  byte GPS_Value = ss.read();
 
   currentState = SYSTEM_OK;
   float pressureInHg = (pressure / 3386.39);
-  return {dhtTemp, bmpTemp, humidity, pressureInHg};
+  return {dhtTemp, bmpTemp, humidity, pressureInHg, GPS_Value};
 }
 
 void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
+  ss.begin(115200);
 
   // Initialize Built-in LED Pins
   pinMode(LED_RED, OUTPUT);
@@ -120,6 +125,7 @@ void loop() {
     Serial.print("DHT22 Temp: ");  Serial.print((data.DHT_temp * 1.8) + 32); Serial.println(" F");
     Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32); Serial.println(" F");
     Serial.print("Pressure: ");    Serial.print(data.pressure); Serial.println(" inHg");
+    Serial.print("GPS Data:); Serial.print(data.GPS_Data);
   } else {
     Serial.println("Failed to read sensors! Check wiring. :C");
   }
