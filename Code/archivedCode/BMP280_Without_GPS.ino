@@ -5,17 +5,14 @@
 #include <WiFi.h>
 #include "time.h"
 
-// 1. PIN DEFINITIONS
-#define DHT22_PIN 2  // This refers to GPIO 2
+#define DHT22_PIN 2
 #define DHTTYPE DHT22
 
-// ESP32-S3 DevKits usually have an addressable LED on GPIO 48 or 38
-// We use the built-in neopixelWrite function
-#define RGB_BRIGHTNESS 64 // 0 to 255
+#define RGB_BRIGHTNESS 64
 #if defined(RGB_BUILTIN)
   #define LED_PIN RGB_BUILTIN
 #else
-  #define LED_PIN 48 // Default for most S3 DevModules; change to 38 if it doesn't light up
+  #define LED_PIN 48
 #endif
 
 enum SystemState {
@@ -43,7 +40,6 @@ const float ERR_VAL = -9999.0;
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;         
 
-// 2. UPDATED LED CONTROL (Neopixel Style)
 void setBuiltInLED(SystemState state) {
   switch (state) {
     case BOOTING:      
@@ -112,14 +108,12 @@ void setup() {
     while (1) delay(10);
   }
 
-  // 4. FIXED BMP280 SAMPLING (Changed 4th arg to FILTER)
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
                   Adafruit_BMP280::SAMPLING_X2,
                   Adafruit_BMP280::SAMPLING_X16,
                   Adafruit_BMP280::FILTER_X16,    // Corrected type
                   Adafruit_BMP280::STANDBY_MS_500);
 
-  // WIFI & TIME SYNC
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial0.print("Connecting to WiFi");
