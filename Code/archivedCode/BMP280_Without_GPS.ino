@@ -161,7 +161,7 @@ void loop() {
     Serial0.print("Humidity: ");    Serial0.print(data.humidity); Serial0.println(" %");
     Serial0.print("DHT22 Temp: ");  Serial0.print((data.DHT_temp * 1.8) + 32); Serial0.println(" F");
     Serial0.print("BMP280 Temp: "); Serial0.print((data.BMP_temp * 1.8) + 32); Serial0.println(" F");
-    Serial0.print("Pressure: ");    Serial0.print(data.pressure); Serial0.println(" hPa");
+    Serial0.print("Pressure: ");    Serial0.print(data.pressure / 10); Serial0.println(" 10ths of hPa");
   } else {
     Serial0.println("System Error! Checking components...");
   }
