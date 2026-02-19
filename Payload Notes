@@ -1,0 +1,4 @@
+For the payload, the shell needs to be made of styrofoam.
+We also need handwarmers to keep the internal components functioning, and we need a small slit in the foam box for the DHT22 to slide into for temperature readings.
+The BMP280 can stay completely in the shell though, as we will only use it for pressure, which will equalize through styrofoam.
+The GPS module can stay inside the box, as it's signals pass through styrofoam.
