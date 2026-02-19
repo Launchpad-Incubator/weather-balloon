@@ -2,7 +2,7 @@ Simplex direct is all that is needed for the balloon
 Header would be @ because we have position with timestamp and this is a weather report
 @092345z4903.50N/07201.75W_220/004g005t-07r000p000P000h50b09900wRSW
 @-Header
-092345z 9:23:45 Zulu time
+092345z 9th day of the month 23:45 Zulu time
 4903.50N/07201.75W_220 Coordnates and direction moving
 004 sustained one minute wind speed in mph
 g005 wind gust in mph (Peak wind speed in last 5 min)
@@ -15,3 +15,4 @@ b09900 pressure in tenths of millibars
 w Windows
 RSW Radioshack
 
+_190123z.../g.../t074r000p000P000h48b09898
