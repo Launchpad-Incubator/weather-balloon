@@ -76,13 +76,13 @@ SensorReadings readSensors() {
   }
 
   currentState = SYSTEM_OK;
-  float pressureInHg = (pressure / 3386.39);
+  float hectoPascals = (pressure / 100);
   
   SensorReadings result;
   result.DHT_temp = dhtTemp;
   result.BMP_temp = bmpTemp;
   result.humidity = humidity;
-  result.pressure = pressureInHg;
+  result.pressure = hectoPascals;
   return result;
 }
 
@@ -157,11 +157,11 @@ void loop() {
 
   if (currentState == SYSTEM_OK) {
     Serial0.println("---------------------------");
-    Serial0.print("Time: "); printInternalTime();
+    printInternalTime();
     Serial0.print("Humidity: ");    Serial0.print(data.humidity); Serial0.println(" %");
     Serial0.print("DHT22 Temp: ");  Serial0.print((data.DHT_temp * 1.8) + 32); Serial0.println(" F");
     Serial0.print("BMP280 Temp: "); Serial0.print((data.BMP_temp * 1.8) + 32); Serial0.println(" F");
-    Serial0.print("Pressure: ");    Serial0.print(data.pressure); Serial0.println(" inHg");
+    Serial0.print("Pressure: ");    Serial0.print(data.pressure); Serial0.println(" hPa");
   } else {
     Serial0.println("System Error! Checking components...");
   }
