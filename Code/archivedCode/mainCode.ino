@@ -35,7 +35,6 @@ const char* ssid = "Bill Clinternet";
 const char* password = "UsmC2336";
 
 const char* ntpServer = "pool.ntp.org";
-const float ERR_VAL = -9999.0;
 
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;         
@@ -88,21 +87,22 @@ SensorReadings readSensors() {
 
 void setup() {
 
-  Serial0.begin(115200);
-  // On ESP32-S3, wait for Serial0 but with a timeout so it runs without a PC
+  Serial.begin(115200);
+  // On ESP32-S3, wait for Serial but with a timeout so it runs without a PC
   unsigned long start = millis();
-  while (!Serial0 && millis() - start < 3000); 
+  while (!Serial && millis() - start < 3000); 
 
   // No pinMode needed for neopixelWrite
   setBuiltInLED(BOOTING);
 
-  Serial0.println("--- ESP32-S3 Weather Station ---");
+  Serial.println("--- ESP32-S3 Weather Station ---");
 
   Wire.begin();
   dht.begin();
 
   if (!bmp.begin(0x76) && !bmp.begin(0x77)) {
-    Serial0.println("BMP not found!");
+    Serial
+.println("BMP not found!");
     currentState = HARDWARE_FIX;
     setBuiltInLED(HARDWARE_FIX);
     while (1) delay(10);
@@ -116,24 +116,27 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial0.print("Connecting to WiFi");
+  Serial.print("Connecting to WiFi");
   int retryCount = 0;
   while (WiFi.status() != WL_CONNECTED && retryCount < 20) {
     delay(500);
-    Serial0.print(".");
+    Serial
+.print(".");
     retryCount++;
   }
 
   if(WiFi.status() == WL_CONNECTED) {
-    Serial0.println(" Connected!");
+    Serial
+.println(" Connected!");
     // Set for UTC: Offset 0, Daylight 0
     configTime(0, 0, ntpServer);
   } else {
-    Serial0.println(" Failed! (Running offline)");
+    Serial
+.println(" Failed! (Running offline)");
   }
 
 
-  Serial0.println("Sensors Initialized.");
+  Serial.println("Sensors Initialized.");
 }
 #include <WiFi.h>
 #include "time.h"
@@ -141,11 +144,12 @@ void setup() {
 void printInternalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    Serial0.println("Time not set yet (sync with NTP first)");
+    Serial
+.println("Time not set yet (sync with NTP first)");
     return;
   }
   // Print formatted time: e.g., "Tuesday, February 18 2026 14:30:05"
-  Serial0.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
   
   // Or access individual components:
   int hour = timeinfo.tm_hour;
@@ -156,14 +160,28 @@ void loop() {
   setBuiltInLED(currentState);
 
   if (currentState == SYSTEM_OK) {
-    Serial0.println("---------------------------");
+    Serial
+.println("---------------------------");
     printInternalTime();
-    Serial0.print("Humidity: ");    Serial0.print(data.humidity); Serial0.println(" %");
-    Serial0.print("DHT22 Temp: ");  Serial0.print((data.DHT_temp * 1.8) + 32, 0); Serial0.println(" F");
-    Serial0.print("BMP280 Temp: "); Serial0.print((data.BMP_temp * 1.8) + 32, 0); Serial0.println(" F");
-    Serial0.print("Pressure: ");    Serial0.print(data.pressure * 10, 0); Serial0.println(" tens of hPa");
+    Serial
+.print("Humidity: ");    Serial
+.print(data.humidity); Serial
+.println(" %");
+    Serial
+.print("DHT22 Temp: ");  Serial
+.print((data.DHT_temp * 1.8) + 32, 0); Serial
+.println(" F");
+    Serial
+.print("BMP280 Temp: "); Serial
+.print((data.BMP_temp * 1.8) + 32, 0); Serial
+.println(" F");
+    Serial
+.print("Pressure: ");    Serial
+.print(data.pressure * 10, 0); Serial
+.println(" tens of hPa");
   } else {
-    Serial0.println("System Error! Checking components...");
+    Serial
+.println("System Error! Checking components...");
   }
   
   delay(1000); // Standard delay for testing
