@@ -5,7 +5,7 @@
 #include <WiFi.h>
 #include "time.h"
 
-#define DHT22_PIN 2
+#define DHT22_PIN D2
 #define DHTTYPE DHT22
 
 #define RGB_BRIGHTNESS 64
@@ -71,6 +71,7 @@ SensorReadings readSensors() {
     errResult.BMP_temp = ERR_VAL;
     errResult.humidity = ERR_VAL;
     errResult.pressure = ERR_VAL;
+    Serial.print("Read ERR");
     return errResult;
   }
 
@@ -85,10 +86,20 @@ SensorReadings readSensors() {
   return result;
 }
 
+void checkDHTConnection() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  if (isnan(h) || isnan(t)) {
+    Serial.println("DHT22 Disconnected or Failed! (Check wiring/resistor)");
+    currentState = READ_ERROR; 
+  } else {
+    Serial.println("DHT22 Connected and Sending Data.");
+  }
+}
+
 void setup() {
 
   Serial.begin(115200);
-  // On ESP32-S3, wait for Serial but with a timeout so it runs without a PC
   unsigned long start = millis();
   while (!Serial && millis() - start < 3000); 
 
@@ -98,7 +109,7 @@ void setup() {
   Serial.println("--- ESP32-S3 Weather Station ---");
 
   Wire.begin();
-  dht.begin();
+  
 
   if (!bmp.begin(0x76) && !bmp.begin(0x77)) {
     Serial
@@ -108,6 +119,8 @@ void setup() {
     while (1) delay(10);
   }
 
+  checkDHTConnection();
+
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
                   Adafruit_BMP280::SAMPLING_X2,
                   Adafruit_BMP280::SAMPLING_X16,
@@ -116,7 +129,7 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi");
+  Serial.print("Bluetooth connected");
   int retryCount = 0;
   while (WiFi.status() != WL_CONNECTED && retryCount < 20) {
     delay(500);
@@ -132,7 +145,7 @@ void setup() {
     configTime(0, 0, ntpServer);
   } else {
     Serial
-.println(" Failed! (Running offline)");
+.println("Nooo mi hotspot");
   }
 
 
@@ -163,25 +176,12 @@ void loop() {
     Serial
 .println("---------------------------");
     printInternalTime();
-    Serial
-.print("Humidity: ");    Serial
-.print(data.humidity); Serial
-.println(" %");
-    Serial
-.print("DHT22 Temp: ");  Serial
-.print((data.DHT_temp * 1.8) + 32, 0); Serial
-.println(" F");
-    Serial
-.print("BMP280 Temp: "); Serial
-.print((data.BMP_temp * 1.8) + 32, 0); Serial
-.println(" F");
-    Serial
-.print("Pressure: ");    Serial
-.print(data.pressure * 10, 0); Serial
-.println(" tens of hPa");
+    Serial.print("Humidity: ");    Serial.print(data.humidity); Serial.println(" %");
+    Serial.print("DHT22 Temp: ");  Serial.print((data.DHT_temp * 1.8) + 32, 0); Serial.println(" F");
+    Serial.print("BMP280 Temp: "); Serial.print((data.BMP_temp * 1.8) + 32, 0); Serial.println(" F");
+    Serial.print("Pressure: ");    Serial.print(data.pressure * 10, 0); Serial.println(" tens of hPa");
   } else {
-    Serial
-.println("System Error! Checking components...");
+    Serial.println("Ruh roh raggy, smth is wrong D:");
   }
   
   delay(1000); // Standard delay for testing
