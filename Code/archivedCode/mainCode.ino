@@ -86,7 +86,9 @@ SensorReadings readSensors() {
   return result;
 }
 
-void checkDHTConnection() {
+void DHT_Startup() {
+  delay(3000);
+  dht.begin();
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   if (isnan(h) || isnan(t)) {
@@ -119,7 +121,7 @@ void setup() {
     while (1) delay(10);
   }
 
-  checkDHTConnection();
+  DHT_Startup();
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
                   Adafruit_BMP280::SAMPLING_X2,
@@ -129,7 +131,7 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.print("Bluetooth connected");
+  Serial.print("Trying to get on le internet");
   int retryCount = 0;
   while (WiFi.status() != WL_CONNECTED && retryCount < 20) {
     delay(500);
@@ -140,7 +142,7 @@ void setup() {
 
   if(WiFi.status() == WL_CONNECTED) {
     Serial
-.println(" Connected!");
+.println(" Bluetooth Device has connected");
     // Set for UTC: Offset 0, Daylight 0
     configTime(0, 0, ntpServer);
   } else {
@@ -169,6 +171,10 @@ void printInternalTime() {
   int min  = timeinfo.tm_min;
 }
 void loop() {
+  if (WiFi.status() != WL_CONNECTED && (millis() % 60000 < 1000)) {
+    WiFi.begin(ssid, password); // Check for Bill Clinternet every minute if not connected
+  }
+
   SensorReadings data = readSensors();
   setBuiltInLED(currentState);
 
