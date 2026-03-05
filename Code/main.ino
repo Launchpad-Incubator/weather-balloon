@@ -81,24 +81,24 @@ SensorReadings readSensors() {
     errResult.longitude = ERR_VAL;
     return errResult;
   }
-
+  float hectoPascals = (pressure / 100);
   if (gps.charsProcessed() < 10) {
      Serial.println("D: No scrumpcious gps data yet? Check wiring pretty please :C");
      currentState = READ_ERROR;
      SensorReadings errResult;
-     errResult.DHT_temp = ERR_VAL;
-     errResult.BMP_temp = ERR_VAL;
-     errResult.humidity = ERR_VAL;
-     errResult.pressure = ERR_VAL;
      errResult.latitude = ERR_VAL;
      errResult.longitude = ERR_VAL;
+     errResult.DHT_temp = dhtTemp;
+     errResult.BMP_temp = bmpTemp;
+     errResult.humidity = humidity;
+     errResult.pressure = hectoPascals;
      return errResult;
   } else {
      currentState = SYSTEM_OK;
   }
 
   currentState = SYSTEM_OK;
-  float hectoPascals = (pressure / 100);
+  
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
@@ -211,7 +211,7 @@ void loop() {
   SensorReadings data = readSensors();
   setBuiltInLED(currentState);
 
-  if (currentState == SYSTEM_OK) {
+  if (currentState == SYSTEM_OK || 0 == 0) {
     Serial
       .println("---------------------------");
     printInternalTime();
