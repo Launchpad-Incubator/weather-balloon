@@ -6,6 +6,7 @@
 #include "time.h"
 #include <TinyGPSPlus.h>      
 #include <SoftwareSerial.h>
+#include <math.h>
 
 #define DHT22_PIN D2
 #define DHTTYPE DHT22
@@ -33,6 +34,8 @@ struct SensorReadings {
   float pressure;
   double latitude;  
   double longitude;
+  float wind_speed;
+  float wind_dir;
 };
 
 const char* ssid = "Bill Clinternet";
@@ -68,6 +71,15 @@ SensorReadings readSensors() {
   float bmpTemp = bmp.readTemperature();
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
+  if (gps.speed.mps() > 0.5) {
+  float wind_dir = fmod(gps.course.deg() + 180, 360);
+  float wind_speed = gps.speed.mps();
+  } else {
+    float wind_speed = 0;
+    float wind_dir = 0;
+  }
+  double lat = gps.location.lat();
+  double lng = gps.location.lng();
 
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
     currentState = READ_ERROR;
@@ -79,6 +91,8 @@ SensorReadings readSensors() {
     errResult.pressure = ERR_VAL;
     errResult.latitude = ERR_VAL;
     errResult.longitude = ERR_VAL;
+    errResult.wind_speed = ERR_VAL;
+    errResult.wind_dir = ERR_VAL;
     return errResult;
   }
   float hectoPascals = (pressure / 100);
@@ -92,21 +106,24 @@ SensorReadings readSensors() {
      errResult.BMP_temp = bmpTemp;
      errResult.humidity = humidity;
      errResult.pressure = hectoPascals;
+     errResult.wind_speed = ERR_VAL;
+     errResult.wind_dir = ERR_VAL;
      return errResult;
   } else {
      currentState = SYSTEM_OK;
   }
 
   currentState = SYSTEM_OK;
-  
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
   result.BMP_temp = bmpTemp;
   result.humidity = humidity;
   result.pressure = hectoPascals;
-  result.longitude = gps.location.lng();
-  result.latitude = gps.location.lat();
+  result.longitude = lng;
+  result.latitude = lat;
+  result.wind_speed = wind_speed;
+  result.wind_dir = wind_dir;
   return result;
 }
 
@@ -124,7 +141,7 @@ void DHT_Startup() {
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   if (isnan(h) || isnan(t)) {
-    Serial.println("DHT22 Disconnected or Failed! (Check wiring/resistor)");
+    Serial.println("dht22 no connecto :(");
     currentState = READ_ERROR;
   } else {
     Serial.println("DHT22 Connected and Sending Data.");
@@ -175,7 +192,7 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial
-      .println(" Bluetooth Device has connected");
+      .println(" Bluetooth connected");
     // Set for UTC: Offset 0, Daylight 0
     configTime(0, 0, ntpServer);
   } else {
@@ -189,6 +206,8 @@ void setup() {
 #include <WiFi.h>
 #include "time.h"
 
+int WindGust = 0;
+
 void printInternalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
@@ -197,7 +216,7 @@ void printInternalTime() {
     return;
   }
   // Print formatted time: e.g., "Tuesday, February 18 2026 14:30:05"
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.print(&timeinfo,  "@%d%H%Mz");
 
   // Or access individual components:
   int hour = timeinfo.tm_hour;
@@ -211,22 +230,22 @@ void loop() {
   SensorReadings data = readSensors();
   setBuiltInLED(currentState);
 
+  if (data.wind_speed > WindGust) {
+    WindGust = data.wind_speed;
+  }
+
   if (currentState == SYSTEM_OK || 0 == 0) {
     Serial
       .println("---------------------------");
     printInternalTime();
-    Serial.print("Humidity: ");
-    Serial.print(data.humidity);
-    Serial.println(" %");
-    Serial.print("DHT22 Temp: ");
-    Serial.print((data.DHT_temp * 1.8) + 32, 0);
-    Serial.println(" F");
-    Serial.print("BMP280 Temp: ");
-    Serial.print((data.BMP_temp * 1.8) + 32, 0);
-    Serial.println(" F");
-    Serial.print("Pressure: ");
+    Serial.print("/t");
+    Serial.print(data.BMP_temp * 1.8 + 32,0);
+    Serial.print("h");
+    Serial.print(data.humidity, 0);
+    Serial.print("b");
     Serial.print(data.pressure / 10, 0);
-    Serial.println(" tenths of hPa");
+    Serial.print("w");
+    Serial.println("RSW");
     if (gps.location.isValid()) {
       Serial.print("Lat: "); Serial.println(data.latitude, 6);
       Serial.print("Lng: "); Serial.println(data.longitude, 6);
