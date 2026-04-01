@@ -43,9 +43,6 @@ const char* password = "UsmC2336";
 
 const char* ntpServer = "pool.ntp.org";
 
-float last_v = 0;
-unsigned long last_time = 0;
-
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
 SoftwareSerial ss(7, 8);    
