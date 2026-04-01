@@ -43,6 +43,9 @@ const char* password = "UsmC2336";
 
 const char* ntpServer = "pool.ntp.org";
 
+float last_v = 0;
+unsigned long last_time = 0;
+
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
 SoftwareSerial ss(7, 8);    
@@ -65,74 +68,41 @@ void setBuiltInLED(SystemState state) {
   }
 }
 
-// 3. FIXED STRUCT RETURN
 SensorReadings readSensors() {
   float dhtTemp = dht.readTemperature();
   float bmpTemp = bmp.readTemperature();
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
-  if (gps.speed.mps() > 0.5) {
-  float wind_dir = fmod(gps.course.deg() + 180, 360);
-  float wind_speed = gps.speed.mps();
-  } else {
-    float wind_speed = 0;
-    float wind_dir = 0;
-  }
-  double lat = gps.location.lat();
-  double lng = gps.location.lng();
-
+  
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
     currentState = READ_ERROR;
-    // Fix: Explicitly create the struct to avoid conversion errors
-    SensorReadings errResult;
-    errResult.DHT_temp = ERR_VAL;
-    errResult.BMP_temp = ERR_VAL;
-    errResult.humidity = ERR_VAL;
-    errResult.pressure = ERR_VAL;
-    errResult.latitude = ERR_VAL;
-    errResult.longitude = ERR_VAL;
-    errResult.wind_speed = ERR_VAL;
-    errResult.wind_dir = ERR_VAL;
+
+    SensorReadings errResult = {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL};
     return errResult;
-  }
-  float hectoPascals = (pressure / 100);
-  if (gps.charsProcessed() < 10) {
-     Serial.println("D: No scrumpcious gps data yet? Check wiring pretty please :C");
-     currentState = READ_ERROR;
-     SensorReadings errResult;
-     errResult.latitude = ERR_VAL;
-     errResult.longitude = ERR_VAL;
-     errResult.DHT_temp = dhtTemp;
-     errResult.BMP_temp = bmpTemp;
-     errResult.humidity = humidity;
-     errResult.pressure = hectoPascals;
-     errResult.wind_speed = ERR_VAL;
-     errResult.wind_dir = ERR_VAL;
-     return errResult;
-  } else {
-     currentState = SYSTEM_OK;
   }
 
   currentState = SYSTEM_OK;
+  float hectoPascals = (pressure / 100.0); // HPA
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
   result.BMP_temp = bmpTemp;
   result.humidity = humidity;
   result.pressure = hectoPascals;
-  result.longitude = lng;
-  result.latitude = lat;
-  result.wind_speed = wind_speed;
-  result.wind_dir = wind_dir;
-  return result;
-}
 
-static void smartDelay(unsigned long ms) {
-  unsigned long start = millis();
-  do {
-    while (ss.available())
-      gps.encode(ss.read());
-  } while (millis() - start < ms);
+  if (gps.location.isValid()) {
+    result.latitude = gps.location.lat();
+    result.longitude = gps.location.lng();
+    result.wind_speed = gps.speed.mps();
+    result.wind_dir = fmod(gps.course.deg() + 180, 360);
+  } else {
+    result.latitude = ERR_VAL; 
+    result.longitude = ERR_VAL;
+    result.wind_speed = 0;
+    result.wind_dir = 0;
+  }
+
+  return result;
 }
 
 void DHT_Startup() {
@@ -147,6 +117,8 @@ void DHT_Startup() {
     Serial.println("DHT22 Connected and Sending Data.");
   }
 }
+
+bool timeSynced = false;
 
 void setup() {
 
@@ -195,6 +167,7 @@ void setup() {
       .println(" Bluetooth connected");
     // Set for UTC: Offset 0, Daylight 0
     configTime(0, 0, ntpServer);
+    timeSynced = true;
   } else {
     Serial
       .println("Nooo mi hotspot");
@@ -215,7 +188,6 @@ void printInternalTime() {
       .println("Time not set yet (sync with NTP first)");
     return;
   }
-  // Print formatted time: e.g., "Tuesday, February 18 2026 14:30:05"
   Serial.print(&timeinfo,  "@%d%H%Mz");
 
   // Or access individual components:
@@ -223,8 +195,13 @@ void printInternalTime() {
   int min = timeinfo.tm_min;
 }
 void loop() {
-  if (WiFi.status() != WL_CONNECTED && (millis() % 60000 < 1000)) {
-    WiFi.begin(ssid, password);  // Check for Bill Clinternet every minute if not connected
+  while (ss.available() > 0) {
+    gps.encode(ss.read());
+  }
+
+
+  if (WiFi.status() != WL_CONNECTED && (millis() % 60000 < 1000) && timeSynced == false) {
+    WiFi.begin(ssid, password);
   }
 
   SensorReadings data = readSensors();
