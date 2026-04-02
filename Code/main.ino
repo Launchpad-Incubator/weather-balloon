@@ -5,7 +5,6 @@
 #include <WiFi.h>
 #include "time.h"
 #include <TinyGPSPlus.h>      
-#include <SoftwareSerial.h>
 #include <math.h>
 
 #define DHT22_PIN D2
@@ -43,9 +42,11 @@ const char* password = "UsmC2336";
 
 const char* ntpServer = "pool.ntp.org";
 
+float last_v = 0;
+unsigned long last_time = 0;
+
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
-SoftwareSerial ss(7, 8);    
 TinyGPSPlus gps;
 
 void setBuiltInLED(SystemState state) {
@@ -139,7 +140,9 @@ void setup() {
     setBuiltInLED(HARDWARE_FIX);
     while (1) delay(10);
   }
-  ss.begin(9600);
+
+  Serial1.begin(9600, SERIAL_8N1, D7, D8); 
+
   DHT_Startup();
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
@@ -192,8 +195,8 @@ void printInternalTime() {
   int min = timeinfo.tm_min;
 }
 void loop() {
-  while (ss.available() > 0) {
-    gps.encode(ss.read());
+  while (Serial1.available() > 0) {
+    gps.encode(Serial1.read());
   }
 
 
@@ -218,8 +221,6 @@ void loop() {
     Serial.print(data.humidity, 0);
     Serial.print("b");
     Serial.print(data.pressure / 10, 0);
-    Serial.print("w");
-    Serial.println("RSW");
     if (gps.location.isValid()) {
       Serial.print("Lat: "); Serial.println(data.latitude, 6);
       Serial.print("Lng: "); Serial.println(data.longitude, 6);
