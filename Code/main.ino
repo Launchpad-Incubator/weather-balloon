@@ -37,9 +37,6 @@ struct SensorReadings {
   float wind_dir;
 };
 
-const char* ssid = "Bill Clinternet";
-const char* password = "UsmC2336";
-
 const char* ntpServer = "pool.ntp.org";
 
 float last_v = 0;
@@ -118,6 +115,60 @@ void DHT_Startup() {
 
 bool timeSynced = false;
 
+const char* networks[][2] = {
+  {"Bill Clinternet", "UsmC2336"},
+  {"Launchpad Internal", "passB"}
+};
+
+void connectWithTimeout() {
+  for (int i = 0; i < 2; i++) {
+    Serial.printf("Trying %s", networks[i][0]);
+    WiFi.begin(networks[i][0], networks[i][1]);
+
+    unsigned long startAttemptTime = millis();
+
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 20000) {
+      delay(500);
+      Serial.print(".");
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nBluetooth Connected");
+      return;
+    } else {
+      Serial.println("\nNooo mi hotspot");
+    }
+  }
+  Serial.println("I have no bars 😭");
+}
+
+void WiFiReconnectorTask(void *pvParameters) {
+  for (;;) { // Infinite loop for the background task
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("[WiFi Task] Connection lost. Retrying...");
+      
+      // Try your backup networks here
+      for (int i = 0; i < 2; i++) {
+        WiFi.begin(networks[i][0], networks[i][1]);
+        unsigned long start = millis();
+        
+        // Wait up to 10 seconds, but check status frequently
+        while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
+          vTaskDelay(500 / portTICK_PERIOD_MS); // FreeRTOS-friendly delay
+        }
+        
+        if (WiFi.status() == WL_CONNECTED) {
+          Serial.println("[WiFi Task] Connected!");
+          // configTime(0, 0, ntpServer); // Sync time here if needed
+          break; 
+        }
+      }
+    }
+    // Check connection status every 30 seconds
+    vTaskDelay(30000 / portTICK_PERIOD_MS); 
+  }
+}
+
 void setup() {
 
   Serial.begin(115200);
@@ -152,29 +203,20 @@ void setup() {
                   Adafruit_BMP280::STANDBY_MS_500);
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.print("Trying to get on le internet");
-  int retryCount = 0;
-  while (WiFi.status() != WL_CONNECTED && retryCount < 20) {
-    delay(500);
-    Serial
-      .print(".");
-    retryCount++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial
-      .println(" Bluetooth connected");
-    // Set for UTC: Offset 0, Daylight 0
-    configTime(0, 0, ntpServer);
-    timeSynced = true;
-  } else {
-    Serial
-      .println("Nooo mi hotspot");
-  }
+  connectWithTimeout();
 
 
   Serial.println("Sensors Initialized.");
+
+  xTaskCreatePinnedToCore(
+    WiFiReconnectorTask,   // Function to run
+    "WiFiTask",          // Name of task
+    4096,                // Stack size
+    NULL,                // Parameter
+    1,                   // Priority
+    NULL,                // Task handle
+    0                    // Run on Core 0
+  );
 }
 #include <WiFi.h>
 #include "time.h"
@@ -190,18 +232,34 @@ void printInternalTime() {
   }
   Serial.print(&timeinfo,  "@%d%H%Mz");
 
-  // Or access individual components:
   int hour = timeinfo.tm_hour;
   int min = timeinfo.tm_min;
 }
+
+String formatTemp(float tempCelsius) {
+  int tempRounded = (int)round(tempCelsius * 1.8 + 32);
+  char buffer[5]; 
+  sprintf(buffer, "%03d", tempRounded % 1000);
+  return String(buffer);
+}
+
+String formatPressure(float pressure) {
+  int pressureRounded = (int)round(pressure / 10);
+  char buffer[7]; 
+  sprintf(buffer, "%05d", pressureRounded % 99999);
+  return String(buffer);
+}
+
+String formatHumidity(float humidity) {
+  int humidityRounded = (int)round(humidity);
+  char buffer[4]; 
+  sprintf(buffer, "%02d", humidityRounded % 100);
+  return String(buffer);
+}
+
 void loop() {
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
-  }
-
-
-  if (WiFi.status() != WL_CONNECTED && (millis() % 60000 < 1000) && timeSynced == false) {
-    WiFi.begin(ssid, password);
   }
 
   SensorReadings data = readSensors();
@@ -216,11 +274,11 @@ void loop() {
       .println("---------------------------");
     printInternalTime();
     Serial.print("/t");
-    Serial.print(data.BMP_temp * 1.8 + 32,0);
+    Serial.print(formatTemp(data.BMP_temp));
     Serial.print("h");
-    Serial.print(data.humidity, 0);
+    Serial.print(formatHumidity(data.humidity));
     Serial.print("b");
-    Serial.print(data.pressure / 10, 0);
+    Serial.print(formatPressure(data.pressure));
     if (gps.location.isValid()) {
       Serial.print("Lat: "); Serial.println(data.latitude, 6);
       Serial.print("Lng: "); Serial.println(data.longitude, 6);
