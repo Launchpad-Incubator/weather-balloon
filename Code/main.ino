@@ -117,7 +117,7 @@ bool timeSynced = false;
 
 const char* networks[][2] = {
   {"Bill Clinternet", "UsmC2336"},
-  {"Launchpad Internal", "passB"}
+  {"Launchpad Internal", "L@unchP@d!nc"}
 };
 
 void connectWithTimeout() {
@@ -134,6 +134,7 @@ void connectWithTimeout() {
 
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("\nBluetooth Connected");
+      configTime(0, 0, ntpServer);
       return;
     } else {
       Serial.println("\nNooo mi hotspot");
@@ -159,7 +160,7 @@ void WiFiReconnectorTask(void *pvParameters) {
         
         if (WiFi.status() == WL_CONNECTED) {
           Serial.println("[WiFi Task] Connected!");
-          // configTime(0, 0, ntpServer); // Sync time here if needed
+          configTime(0, 0, ntpServer);
           break; 
         }
       }
@@ -192,7 +193,8 @@ void setup() {
     while (1) delay(10);
   }
 
-  Serial1.begin(9600, SERIAL_8N1, D7, D8); 
+  Serial1.setRxBufferSize(1024);
+  Serial1.begin(9600, SERIAL_8N1, D7, D8, false); 
 
   DHT_Startup();
 
@@ -218,8 +220,6 @@ void setup() {
     0                    // Run on Core 0
   );
 }
-#include <WiFi.h>
-#include "time.h"
 
 int WindGust = 0;
 
@@ -244,9 +244,9 @@ String formatTemp(float tempCelsius) {
 }
 
 String formatPressure(float pressure) {
-  int pressureRounded = (int)round(pressure / 10);
+  int pressureRounded = (int)round(pressure * 10);
   char buffer[7]; 
-  sprintf(buffer, "%05d", pressureRounded % 99999);
+  sprintf(buffer, "%05d", pressureRounded % 100000);
   return String(buffer);
 }
 
@@ -283,7 +283,7 @@ void loop() {
       Serial.print("Lat: "); Serial.println(data.latitude, 6);
       Serial.print("Lng: "); Serial.println(data.longitude, 6);
     } else {
-      Serial.println("gps is looking for satelites :O");
+      Serial.println("  gps is looking for satelites :O");
     }
   } else {
     Serial.println("Ruh roh raggy, smth is wrong D:");
