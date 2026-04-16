@@ -49,16 +49,16 @@ TinyGPSPlus gps;
 void setBuiltInLED(SystemState state) {
   switch (state) {
     case BOOTING:
-      neopixelWrite(LED_PIN, 0, 0, RGB_BRIGHTNESS);  // Blue
+      neopixelWrite(LED_PIN, 0, 0, RGB_BRIGHTNESS);
       break;
     case SYSTEM_OK:
-      neopixelWrite(LED_PIN, 0, RGB_BRIGHTNESS, 0);  // Green
+      neopixelWrite(LED_PIN, 0, RGB_BRIGHTNESS, 0); 
       break;
     case READ_ERROR:
-      neopixelWrite(LED_PIN, RGB_BRIGHTNESS, RGB_BRIGHTNESS / 2, 0);  // Orange
+      neopixelWrite(LED_PIN, RGB_BRIGHTNESS, RGB_BRIGHTNESS / 2, 0);
       break;
     case HARDWARE_FIX:
-      neopixelWrite(LED_PIN, RGB_BRIGHTNESS, 0, 0);  // Red
+      neopixelWrite(LED_PIN, RGB_BRIGHTNESS, 0, 0);
       break;
   }
 }
@@ -76,7 +76,6 @@ SensorReadings readSensors() {
     return errResult;
   }
 
-  currentState = SYSTEM_OK;
   float hectoPascals = (pressure / 100.0); // HPA
 
   SensorReadings result;
@@ -90,6 +89,7 @@ SensorReadings readSensors() {
     result.longitude = gps.location.lng();
     result.wind_speed = gps.speed.mps();
     result.wind_dir = fmod(gps.course.deg() + 180, 360);
+    currentState = SYSTEM_OK;
   } else {
     result.latitude = ERR_VAL; 
     result.longitude = ERR_VAL;
@@ -144,18 +144,16 @@ void connectWithTimeout() {
 }
 
 void WiFiReconnectorTask(void *pvParameters) {
-  for (;;) { // Infinite loop for the background task
+  for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("[WiFi Task] Connection lost. Retrying...");
       
-      // Try your backup networks here
       for (int i = 0; i < 2; i++) {
         WiFi.begin(networks[i][0], networks[i][1]);
         unsigned long start = millis();
         
-        // Wait up to 10 seconds, but check status frequently
         while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
-          vTaskDelay(500 / portTICK_PERIOD_MS); // FreeRTOS-friendly delay
+          vTaskDelay(500 / portTICK_PERIOD_MS);
         }
         
         if (WiFi.status() == WL_CONNECTED) {
@@ -165,7 +163,6 @@ void WiFiReconnectorTask(void *pvParameters) {
         }
       }
     }
-    // Check connection status every 30 seconds
     vTaskDelay(30000 / portTICK_PERIOD_MS); 
   }
 }
@@ -177,7 +174,6 @@ void setup() {
   while (!Serial && millis() - start < 3000)
     ;
 
-  // No pinMode needed for neopixelWrite
   setBuiltInLED(BOOTING);
 
   Serial.println("--- ESP32-S3 Weather Station ---");
@@ -261,6 +257,12 @@ void loop() {
   while (Serial1.available() > 0) {
     gps.encode(Serial1.read());
   }
+  Serial.print("GPS found this many yummalicious characters: ");
+  Serial.println(gps.charsProcessed());
+
+  if (gps.charsProcessed() < 10 && millis() > 5000) {
+    Serial.println("D: no gps found");
+  }
 
   SensorReadings data = readSensors();
   setBuiltInLED(currentState);
@@ -269,7 +271,7 @@ void loop() {
     WindGust = data.wind_speed;
   }
 
-  if (currentState == SYSTEM_OK || 0 == 0) {
+  if (currentState == SYSTEM_OK) {
     Serial
       .println("---------------------------");
     printInternalTime();
@@ -284,9 +286,11 @@ void loop() {
       Serial.print("Lng: "); Serial.println(data.longitude, 6);
     } else {
       Serial.println("  gps is looking for satelites :O");
+      currentState = READ_ERROR;
     }
   } else {
-    Serial.println("Ruh roh raggy, smth is wrong D:");
+    Serial.println("Ruh roh raggy, something is wrong D:");
+    currentState = READ_ERROR;
   }
 
   delay(1000);  // Standard delay for testing
