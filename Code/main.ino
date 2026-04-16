@@ -253,9 +253,11 @@ String formatHumidity(float humidity) {
   return String(buffer);
 }
 
+char c
+
 void loop() {
   while (Serial1.available() > 0) {
-    char c = Serial1.read();
+    c = Serial1.read();
     Serial.print(c);
     gps.encode(c);
   }
