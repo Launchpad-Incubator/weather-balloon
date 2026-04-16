@@ -255,7 +255,9 @@ String formatHumidity(float humidity) {
 
 void loop() {
   while (Serial1.available() > 0) {
-    gps.encode(Serial1.read());
+    char c = Serial1.read();
+    Serial.write(c);
+    gps.encode(c);
   }
   Serial.print("GPS found this many yummalicious characters: ");
   Serial.println(gps.charsProcessed());
