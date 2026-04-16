@@ -253,7 +253,7 @@ String formatHumidity(float humidity) {
   return String(buffer);
 }
 
-char c = "";
+char c;
 
 void loop() {
   while (Serial1.available() > 0) {
