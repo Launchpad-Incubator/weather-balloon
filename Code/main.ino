@@ -190,7 +190,7 @@ void setup() {
   }
 
   Serial1.setRxBufferSize(1024);
-  Serial1.begin(9600, SERIAL_8N1, D7, D8, false); 
+  Serial1.begin(4800, SERIAL_8N1, D7, D8, false); 
 
   DHT_Startup();
 
