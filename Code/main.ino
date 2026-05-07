@@ -4,7 +4,7 @@
 #include <Adafruit_BMP280.h>
 #include <WiFi.h>
 #include "time.h"
-#include <TinyGPSPlus.h>      
+#include <TinyGPSPlus.h>
 #include <math.h>
 
 #define DHT22_PIN D2
@@ -31,7 +31,7 @@ struct SensorReadings {
   float BMP_temp;
   float humidity;
   float pressure;
-  double latitude;  
+  double latitude;
   double longitude;
   float wind_speed;
   float wind_dir;
@@ -52,7 +52,7 @@ void setBuiltInLED(SystemState state) {
       neopixelWrite(LED_PIN, 0, 0, RGB_BRIGHTNESS);
       break;
     case SYSTEM_OK:
-      neopixelWrite(LED_PIN, 0, RGB_BRIGHTNESS, 0); 
+      neopixelWrite(LED_PIN, 0, RGB_BRIGHTNESS, 0);
       break;
     case READ_ERROR:
       neopixelWrite(LED_PIN, RGB_BRIGHTNESS, RGB_BRIGHTNESS / 2, 0);
@@ -68,15 +68,15 @@ SensorReadings readSensors() {
   float bmpTemp = bmp.readTemperature();
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
-  
+
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
     currentState = READ_ERROR;
 
-    SensorReadings errResult = {ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL};
+    SensorReadings errResult = { ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL };
     return errResult;
   }
 
-  float hectoPascals = (pressure / 100.0); // HPA
+  float hectoPascals = (pressure / 100.0);  // HPA
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
@@ -91,7 +91,7 @@ SensorReadings readSensors() {
     result.wind_dir = fmod(gps.course.deg() + 180, 360);
     currentState = SYSTEM_OK;
   } else {
-    result.latitude = ERR_VAL; 
+    result.latitude = ERR_VAL;
     result.longitude = ERR_VAL;
     result.wind_speed = 0;
     result.wind_dir = 0;
@@ -116,8 +116,8 @@ void DHT_Startup() {
 bool timeSynced = false;
 
 const char* networks[][2] = {
-  {"Bill Clinternet", "UsmC2336"},
-  {"Launchpad Internal", "L@unchP@d!nc"}
+  { "Launchpad Internal", "L@unchP@d!nc" },
+  { "Bill Clinternet", "UsmC2336" },
 };
 
 void connectWithTimeout() {
@@ -143,27 +143,27 @@ void connectWithTimeout() {
   Serial.println("I have no bars 😭");
 }
 
-void WiFiReconnectorTask(void *pvParameters) {
+void WiFiReconnectorTask(void* pvParameters) {
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("[WiFi Task] Connection lost. Retrying...");
-      
+
       for (int i = 0; i < 2; i++) {
         WiFi.begin(networks[i][0], networks[i][1]);
         unsigned long start = millis();
-        
+
         while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
           vTaskDelay(500 / portTICK_PERIOD_MS);
         }
-        
+
         if (WiFi.status() == WL_CONNECTED) {
           Serial.println("[WiFi Task] Connected!");
           configTime(0, 0, ntpServer);
-          break; 
+          break;
         }
       }
     }
-    vTaskDelay(30000 / portTICK_PERIOD_MS); 
+    vTaskDelay(30000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -190,7 +190,7 @@ void setup() {
   }
 
   Serial1.setRxBufferSize(1024);
-  Serial1.begin(4800, SERIAL_8N1, D7, D8, false); 
+  Serial1.begin(4800, SERIAL_8N1, D7, D8, false);
 
   DHT_Startup();
 
@@ -207,13 +207,13 @@ void setup() {
   Serial.println("Sensors Initialized.");
 
   xTaskCreatePinnedToCore(
-    WiFiReconnectorTask,   // Function to run
-    "WiFiTask",          // Name of task
-    4096,                // Stack size
-    NULL,                // Parameter
-    1,                   // Priority
-    NULL,                // Task handle
-    0                    // Run on Core 0
+    WiFiReconnectorTask,  // Function to run
+    "WiFiTask",           // Name of task
+    4096,                 // Stack size
+    NULL,                 // Parameter
+    1,                    // Priority
+    NULL,                 // Task handle
+    0                     // Run on Core 0
   );
 }
 
@@ -226,7 +226,7 @@ void printInternalTime() {
       .println("Time not set yet (sync with NTP first)");
     return;
   }
-  Serial.print(&timeinfo,  "@%d%H%Mz");
+  Serial.print(&timeinfo, "@%d%H%Mz");
 
   int hour = timeinfo.tm_hour;
   int min = timeinfo.tm_min;
@@ -234,68 +234,75 @@ void printInternalTime() {
 
 String formatTemp(float tempCelsius) {
   int tempRounded = (int)round(tempCelsius * 1.8 + 32);
-  char buffer[5]; 
+  char buffer[5];
   sprintf(buffer, "%03d", tempRounded % 1000);
   return String(buffer);
 }
 
 String formatPressure(float pressure) {
   int pressureRounded = (int)round(pressure * 10);
-  char buffer[7]; 
+  char buffer[7];
   sprintf(buffer, "%05d", pressureRounded % 100000);
   return String(buffer);
 }
 
 String formatHumidity(float humidity) {
   int humidityRounded = (int)round(humidity);
-  char buffer[4]; 
+  char buffer[4];
   sprintf(buffer, "%02d", humidityRounded % 100);
   return String(buffer);
 }
 
 char c;
 
+unsigned long lastTime = 0;
+const unsigned long interval = 1000;
+
 void loop() {
   while (Serial1.available() > 0) {
     c = Serial1.read();
-    Serial.print(c);
     gps.encode(c);
   }
-  Serial.print("GPS found this many yummalicious characters: ");
-  Serial.println(gps.charsProcessed());
 
-  if (gps.charsProcessed() < 10 && millis() > 5000) {
-    Serial.println("D: no gps found");
-  }
+  if (millis() - lastTime >= interval) {
+    lastTime = millis();
+    SensorReadings data = readSensors();
+    setBuiltInLED(currentState);
 
-  SensorReadings data = readSensors();
-  setBuiltInLED(currentState);
+    if (data.wind_speed > WindGust) {
+      WindGust = data.wind_speed;
+    }
 
-  if (data.wind_speed > WindGust) {
-    WindGust = data.wind_speed;
-  }
+    if (currentState == SYSTEM_OK || 0 == 0) {
+      Serial
+        .println("---------------------------");
+      printInternalTime();
+      Serial.print("/t");
+      Serial.print(formatTemp(data.BMP_temp));
+      Serial.print("h");
+      Serial.print(formatHumidity(data.humidity));
+      Serial.print("b");
+      Serial.println(formatPressure(data.pressure));
+      if (gps.location.isValid()) {
+        Serial.print("Lat: ");
+        Serial.println(data.latitude, 6);
+        Serial.print("Lng: ");
+        Serial.println(data.longitude, 6);
+      } else {
+        Serial.print("total gps char snacks: ");
+        Serial.println(gps.charsProcessed());
 
-  if (currentState == SYSTEM_OK) {
-    Serial
-      .println("---------------------------");
-    printInternalTime();
-    Serial.print("/t");
-    Serial.print(formatTemp(data.BMP_temp));
-    Serial.print("h");
-    Serial.print(formatHumidity(data.humidity));
-    Serial.print("b");
-    Serial.print(formatPressure(data.pressure));
-    if (gps.location.isValid()) {
-      Serial.print("Lat: "); Serial.println(data.latitude, 6);
-      Serial.print("Lng: "); Serial.println(data.longitude, 6);
+        Serial.print("good yum yum data: ");
+        Serial.println(gps.sentencesWithFix());
+
+        Serial.print("bad no good bleh data: ");
+        Serial.println(gps.failedChecksum());
+        Serial.println("gps is looking for satelites :O");
+        currentState = READ_ERROR;
+      }
     } else {
-      Serial.println("  gps is looking for satelites :O");
+      Serial.println("Ruh roh raggy, something is wrong D:");
       currentState = READ_ERROR;
     }
-  } else {
-    Serial.println("Ruh roh raggy, something is wrong D:");
-    currentState = READ_ERROR;
   }
-
-  delay(1000);  // Standard delay for testing
 }
