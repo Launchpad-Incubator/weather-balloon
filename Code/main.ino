@@ -75,7 +75,7 @@ SensorReadings readSensors() {
     return errResult;
   }
 
-  float hectoPascals = (pressure / 100.0); 
+  float hectoPascals = (pressure / 100.0);
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
@@ -169,7 +169,8 @@ void WiFiReconnectorTask(void* pvParameters) {
 void setup() {
   Serial.begin(115200);
   unsigned long start = millis();
-  while (!Serial && millis() - start < 3000);
+  while (!Serial && millis() - start < 3000)
+    ;
 
   setBuiltInLED(BOOTING);
   Serial.println("--- ESP32-S3 Weather Station ---");
@@ -206,8 +207,7 @@ void setup() {
     NULL,
     1,
     NULL,
-    0
-  );
+    0);
 }
 
 int WindGust = 0;
@@ -218,7 +218,7 @@ void printInternalTime() {
     Serial.println("Time not set yet (sync with NTP first)");
     return;
   }
-  Serial.print(&timeinfo, "@%d%H%Mz");
+  Serial.print(&timeinfo, "%d%H%Mz");
 }
 
 String formatTemp(float tempCelsius) {
@@ -258,10 +258,10 @@ void loop() {
     if ((c >= 32 && c <= 126) || c == '\r' || c == '\n') {
 
       if (c == '$' || c == 'G' || c == 'P') {
-        Serial.write(c); 
+        Serial.write(c);
         gps.encode(c);
       } else if (gps.charsProcessed() > 0) {
-        Serial.write(c); 
+        Serial.write(c);
         gps.encode(c);
       }
     }
@@ -278,6 +278,25 @@ void loop() {
 
     if (currentState == SYSTEM_OK || 1 == 1) {
       Serial.println("\n---------------------------");
+      Serial.print("@");
+      if (gps.location.isValid()) {
+        int latDeg = (int)data.latitude;
+        double latMin = (data.latitude - latDeg) * 60.0;
+        char latStr[9];
+        sprintf(latStr, "%02d%05.2f%c", abs(latDeg), latMin, (latDeg >= 0) ? 'N' : 'S');
+
+        int lngDeg = (int)data.longitude;
+        double lngMin = (data.longitude - lngDeg) * 60.0;
+        char lngStr[10];
+        sprintf(lngStr, "%03d%05.2f%c", abs(lngDeg), lngMin, (lngDeg >= 0) ? 'E' : 'W');
+
+        Serial.print(latStr);
+        Serial.print("/");
+        Serial.print(lngStr);
+        Serial.print("_");
+      } else {
+        Serial.print("0000.00N/00000.00W_");
+      }
       printInternalTime();
       Serial.print("/t");
       Serial.print(formatTemp(data.BMP_temp));
@@ -285,19 +304,9 @@ void loop() {
       Serial.print(formatHumidity(data.humidity));
       Serial.print("b");
       Serial.println(formatPressure(data.pressure));
-      
+
       if (gps.location.isValid()) {
-        Serial.print("Lat: ");
-        Serial.println(data.latitude, 6);
-        Serial.print("Lng: ");
-        Serial.println(data.longitude, 6);
       } else {
-        Serial.print("total gps char snacks: ");
-        Serial.println(gps.charsProcessed());
-        Serial.print("good yum yum data: ");
-        Serial.println(gps.passedChecksum());
-        Serial.print("bad no good bleh data: ");
-        Serial.println(gps.failedChecksum());
         Serial.println("gps is looking for satelites :O");
         currentState = READ_ERROR;
       }
