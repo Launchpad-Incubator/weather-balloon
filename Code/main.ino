@@ -71,12 +71,11 @@ SensorReadings readSensors() {
 
   if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
     currentState = READ_ERROR;
-
     SensorReadings errResult = { ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL };
     return errResult;
   }
 
-  float hectoPascals = (pressure / 100.0);  // HPA
+  float hectoPascals = (pressure / 100.0); 
 
   SensorReadings result;
   result.DHT_temp = dhtTemp;
@@ -168,52 +167,46 @@ void WiFiReconnectorTask(void* pvParameters) {
 }
 
 void setup() {
-
   Serial.begin(115200);
   unsigned long start = millis();
-  while (!Serial && millis() - start < 3000)
-    ;
+  while (!Serial && millis() - start < 3000);
 
   setBuiltInLED(BOOTING);
-
   Serial.println("--- ESP32-S3 Weather Station ---");
 
   Wire.begin();
 
-
   if (!bmp.begin(0x76) && !bmp.begin(0x77)) {
-    Serial
-      .println("BMP not found!");
+    Serial.println("BMP not found!");
     currentState = HARDWARE_FIX;
     setBuiltInLED(HARDWARE_FIX);
     while (1) delay(10);
   }
 
   Serial1.setRxBufferSize(1024);
-  Serial1.begin(4800, SERIAL_8N1, D7, D8, false);
+  Serial1.begin(115200, SERIAL_8N1, D7, D8, false);
 
   DHT_Startup();
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
                   Adafruit_BMP280::SAMPLING_X2,
                   Adafruit_BMP280::SAMPLING_X16,
-                  Adafruit_BMP280::FILTER_X16,  // Corrected type
+                  Adafruit_BMP280::FILTER_X16,
                   Adafruit_BMP280::STANDBY_MS_500);
 
   WiFi.mode(WIFI_STA);
   connectWithTimeout();
 
-
   Serial.println("Sensors Initialized.");
 
   xTaskCreatePinnedToCore(
-    WiFiReconnectorTask,  // Function to run
-    "WiFiTask",           // Name of task
-    4096,                 // Stack size
-    NULL,                 // Parameter
-    1,                    // Priority
-    NULL,                 // Task handle
-    0                     // Run on Core 0
+    WiFiReconnectorTask,
+    "WiFiTask",
+    4096,
+    NULL,
+    1,
+    NULL,
+    0
   );
 }
 
@@ -222,14 +215,10 @@ int WindGust = 0;
 void printInternalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    Serial
-      .println("Time not set yet (sync with NTP first)");
+    Serial.println("Time not set yet (sync with NTP first)");
     return;
   }
   Serial.print(&timeinfo, "@%d%H%Mz");
-
-  int hour = timeinfo.tm_hour;
-  int min = timeinfo.tm_min;
 }
 
 String formatTemp(float tempCelsius) {
@@ -253,15 +242,29 @@ String formatHumidity(float humidity) {
   return String(buffer);
 }
 
-char c;
-
 unsigned long lastTime = 0;
 const unsigned long interval = 1000;
 
+bool currentInversion = false;
+long currentBaud = 115200;
+
 void loop() {
-  while (Serial1.available() > 0) {
-    c = Serial1.read();
-    gps.encode(c);
+
+  int bytesProcessed = 0;
+  while (Serial1.available() > 0 && bytesProcessed < 128) {
+    char c = Serial1.read();
+    bytesProcessed++;
+
+    if ((c >= 32 && c <= 126) || c == '\r' || c == '\n') {
+
+      if (c == '$' || c == 'G' || c == 'P') {
+        Serial.write(c); 
+        gps.encode(c);
+      } else if (gps.charsProcessed() > 0) {
+        Serial.write(c); 
+        gps.encode(c);
+      }
+    }
   }
 
   if (millis() - lastTime >= interval) {
@@ -273,9 +276,8 @@ void loop() {
       WindGust = data.wind_speed;
     }
 
-    if (currentState == SYSTEM_OK || 0 == 0) {
-      Serial
-        .println("---------------------------");
+    if (currentState == SYSTEM_OK || 1 == 1) {
+      Serial.println("\n---------------------------");
       printInternalTime();
       Serial.print("/t");
       Serial.print(formatTemp(data.BMP_temp));
@@ -283,6 +285,7 @@ void loop() {
       Serial.print(formatHumidity(data.humidity));
       Serial.print("b");
       Serial.println(formatPressure(data.pressure));
+      
       if (gps.location.isValid()) {
         Serial.print("Lat: ");
         Serial.println(data.latitude, 6);
@@ -291,10 +294,8 @@ void loop() {
       } else {
         Serial.print("total gps char snacks: ");
         Serial.println(gps.charsProcessed());
-
         Serial.print("good yum yum data: ");
-        Serial.println(gps.sentencesWithFix());
-
+        Serial.println(gps.passedChecksum());
         Serial.print("bad no good bleh data: ");
         Serial.println(gps.failedChecksum());
         Serial.println("gps is looking for satelites :O");
