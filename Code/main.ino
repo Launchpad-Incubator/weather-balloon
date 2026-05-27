@@ -258,10 +258,10 @@ void loop() {
     if ((c >= 32 && c <= 126) || c == '\r' || c == '\n') {
 
       if (c == '$' || c == 'G' || c == 'P') {
-        Serial.write(c);
+        //Serial.write(c);
         gps.encode(c);
       } else if (gps.charsProcessed() > 0) {
-        Serial.write(c);
+        //Serial.write(c);
         gps.encode(c);
       }
     }
@@ -307,7 +307,7 @@ void loop() {
 
       if (gps.location.isValid()) {
       } else {
-        Serial.println("gps is looking for satelites :O");
+        Serial.println("gps is looking for satelites :O (" + String(gps.satellites.value()) + " satellites found)");
         currentState = READ_ERROR;
       }
     } else {
