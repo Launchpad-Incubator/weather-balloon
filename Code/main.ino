@@ -184,7 +184,7 @@ void setup() {
     while (1) delay(10);
   }
 
-  Serial1.setRxBufferSize(1024);
+  Serial1.setRxBufferSize(2048);
   Serial1.begin(115200, SERIAL_8N1, D7, D8, false);
 
   DHT_Startup();
@@ -256,14 +256,8 @@ void loop() {
     bytesProcessed++;
 
     if ((c >= 32 && c <= 126) || c == '\r' || c == '\n') {
-
-      if (c == '$' || c == 'G' || c == 'P') {
-        //Serial.write(c);
+        Serial.write(c);
         gps.encode(c);
-      } else if (gps.charsProcessed() > 0) {
-        //Serial.write(c);
-        gps.encode(c);
-      }
     }
   }
 
