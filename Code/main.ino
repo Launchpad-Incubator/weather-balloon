@@ -167,6 +167,10 @@ void WiFiReconnectorTask(void* pvParameters) {
 }
 
 void setup() {
+
+  pinMode(3, OUTPUT);
+  digitalWrite(3, LOW);
+
   Serial.begin(115200);
   unsigned long start = millis();
   while (!Serial && millis() - start < 3000)
