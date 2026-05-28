@@ -162,7 +162,11 @@ void WiFiReconnectorTask(void* pvParameters) {
         }
       }
     }
+
+
     vTaskDelay(30000 / portTICK_PERIOD_MS);
+
+    
   }
 }
 
