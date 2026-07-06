@@ -162,19 +162,11 @@ void WiFiReconnectorTask(void* pvParameters) {
         }
       }
     }
-
-
     vTaskDelay(30000 / portTICK_PERIOD_MS);
-
-    
   }
 }
 
 void setup() {
-
-  pinMode(3, OUTPUT);
-  digitalWrite(3, LOW);
-
   Serial.begin(115200);
   unsigned long start = millis();
   while (!Serial && millis() - start < 3000)
@@ -192,8 +184,8 @@ void setup() {
     while (1) delay(10);
   }
 
-  Serial1.setRxBufferSize(2048);
-  Serial1.begin(115200, SERIAL_8N1, D7, D8, false);
+  Serial1.setRxBufferSize(1024);
+  Serial1.begin(9600, SERIAL_8N1, D7, D8, false);
 
   DHT_Startup();
 
@@ -251,21 +243,36 @@ String formatHumidity(float humidity) {
 }
 
 unsigned long lastTime = 0;
-const unsigned long interval = 1000;
+const unsigned long interval = 100;
 
-bool currentInversion = false;
-long currentBaud = 115200;
+const int BATCH_SIZE = 25;
+String packetBatch[BATCH_SIZE];
+int packetCounter = 0;
 
 void loop() {
 
   int bytesProcessed = 0;
-  while (Serial1.available() > 0 && bytesProcessed < 128) {
+  static String nmeaBuffer = "";
+
+  while (Serial1.available() > 0 && bytesProcessed < 1024) {
     char c = Serial1.read();
     bytesProcessed++;
 
-    if ((c >= 32 && c <= 126) || c == '\r' || c == '\n') {
-        Serial.write(c);
-        gps.encode(c);
+    if (c == '\n' || c == '\r') {
+      if (nmeaBuffer.length() > 0) {
+        if (nmeaBuffer.startsWith("$GN")) {
+          nmeaBuffer.setCharAt(2, 'P'); 
+        }
+        
+        for (int i = 0; i < nmeaBuffer.length(); i++) {
+          gps.encode(nmeaBuffer[i]);
+        }
+        gps.encode('\r');
+        gps.encode('\n');
+        
+      }
+    } else if (c >= 32 && c <= 126) {
+      nmeaBuffer += c;
     }
   }
 
@@ -279,38 +286,50 @@ void loop() {
     }
 
     if (currentState == SYSTEM_OK || 1 == 1) {
-      Serial.println("\n---------------------------");
-      Serial.print("@");
-      if (gps.location.isValid()) {
-        int latDeg = (int)data.latitude;
-        double latMin = (data.latitude - latDeg) * 60.0;
-        char latStr[9];
-        sprintf(latStr, "%02d%05.2f%c", abs(latDeg), latMin, (latDeg >= 0) ? 'N' : 'S');
-
-        int lngDeg = (int)data.longitude;
-        double lngMin = (data.longitude - lngDeg) * 60.0;
-        char lngStr[10];
-        sprintf(lngStr, "%03d%05.2f%c", abs(lngDeg), lngMin, (lngDeg >= 0) ? 'E' : 'W');
-
-        Serial.print(latStr);
-        Serial.print("/");
-        Serial.print(lngStr);
-        Serial.print("_");
-      } else {
-        Serial.print("0000.00N/00000.00W_");
-      }
-      printInternalTime();
-      Serial.print("/t");
-      Serial.print(formatTemp(data.BMP_temp));
-      Serial.print("h");
-      Serial.print(formatHumidity(data.humidity));
-      Serial.print("b");
-      Serial.println(formatPressure(data.pressure));
-
       if (gps.location.isValid()) {
       } else {
         Serial.println("gps is looking for satelites :O (" + String(gps.satellites.value()) + " satellites found)");
         currentState = READ_ERROR;
+      }
+    
+
+      String currentPacket = "@";
+      if (gps.location.isValid()) {
+        int latDeg = (int)data.latitude;
+        double latMin = (data.latitude - latDeg) * 60.0;
+        char latStr[9];
+        sprintf(latStr, "%02d%05.2f%c", abs(latDeg), fabs(latMin), (latDeg >= 0) ? 'N' : 'S');
+
+        int lngDeg = (int)data.longitude;
+        double lngMin = (data.longitude - lngDeg) * 60.0;
+        char lngStr[10];
+        sprintf(lngStr, "%03d%05.2f%c", abs(lngDeg), fabs(lngMin), (lngDeg >= 0) ? 'E' : 'W');
+
+        currentPacket += String(latStr) + "/" + String(lngStr) + "_";
+      } else {
+        currentPacket += "0000.00N/00000.00W_";
+      }
+
+      currentPacket += "061945z/t" + formatTemp(data.BMP_temp) + "h" + formatHumidity(data.humidity) + "b" + formatPressure(data.pressure) + "\n";
+
+      Serial.print(currentPacket);
+
+      if (packetCounter < BATCH_SIZE) {
+        packetBatch[packetCounter] = currentPacket;
+        packetCounter++;
+      }
+      if (packetCounter >= BATCH_SIZE) {
+        Serial.println("\n Sending batch");
+
+        String fullBatch = "";
+        for (int i = 0; i < BATCH_SIZE; i++) {
+          fullBatch += packetBatch[i];
+        }
+        Serial.println("--- START OF TRANSMITTED BLOCK ---");
+        Serial.print(fullBatch);
+        Serial.println("--- END OF TRANSMITTED BLOCK ---");
+
+        packetCounter = 0;
       }
     } else {
       Serial.println("Ruh roh raggy, something is wrong D:");
