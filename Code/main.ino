@@ -94,6 +94,7 @@ SensorReadings readSensors() {
     result.longitude = ERR_VAL;
     result.wind_speed = 0;
     result.wind_dir = 0;
+    currentState = READ_ERROR;
   }
 
   return result;
@@ -260,9 +261,6 @@ void loop() {
 
     if (c == '\n' || c == '\r') {
       if (nmeaBuffer.length() > 0) {
-        if (nmeaBuffer.startsWith("$GN")) {
-          nmeaBuffer.setCharAt(2, 'P'); 
-        }
         
         for (int i = 0; i < nmeaBuffer.length(); i++) {
           gps.encode(nmeaBuffer[i]);
@@ -270,6 +268,7 @@ void loop() {
         gps.encode('\r');
         gps.encode('\n');
         
+        nmeaBuffer = "";
       }
     } else if (c >= 32 && c <= 126) {
       nmeaBuffer += c;
@@ -285,7 +284,7 @@ void loop() {
       WindGust = data.wind_speed;
     }
 
-    if (currentState == SYSTEM_OK || 1 == 1) {
+    if (currentState == SYSTEM_OK) {
       if (gps.location.isValid()) {
       } else {
         Serial.println("gps is looking for satelites :O (" + String(gps.satellites.value()) + " satellites found)");
@@ -319,21 +318,18 @@ void loop() {
         packetCounter++;
       }
       if (packetCounter >= BATCH_SIZE) {
-        Serial.println("\n Sending batch");
+        Serial.println("\nSending batch");
 
         String fullBatch = "";
         for (int i = 0; i < BATCH_SIZE; i++) {
           fullBatch += packetBatch[i];
         }
-        Serial.println("--- START OF TRANSMITTED BLOCK ---");
-        Serial.print(fullBatch);
-        Serial.println("--- END OF TRANSMITTED BLOCK ---");
+        //send batch here
 
         packetCounter = 0;
       }
     } else {
-      Serial.println("Ruh roh raggy, something is wrong D:");
-      currentState = READ_ERROR;
+      Serial.println("check wiring and whether sensors are on");
     }
   }
 }
