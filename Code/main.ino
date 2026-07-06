@@ -222,6 +222,20 @@ void printInternalTime() {
   Serial.print(&timeinfo, "%d%H%Mz");
 }
 
+String giveInternalTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    return "Time not set yet (sync with NTP first)";
+  }
+  
+  char buffer[16];
+  if (strftime(buffer, sizeof(buffer), "%d%H%Mz", &timeinfo) > 0) {
+    return String(buffer);
+  } else {
+    return "Formatting Error";
+  }
+}
+
 String formatTemp(float tempCelsius) {
   int tempRounded = (int)round(tempCelsius * 1.8 + 32);
   char buffer[5];
@@ -309,7 +323,7 @@ void loop() {
         currentPacket += "0000.00N/00000.00W_";
       }
 
-      currentPacket += "061945z/t" + formatTemp(data.BMP_temp) + "h" + formatHumidity(data.humidity) + "b" + formatPressure(data.pressure) + "\n";
+      currentPacket += giveInternalTime() + formatTemp(data.BMP_temp) + "h" + formatHumidity(data.humidity) + "b" + formatPressure(data.pressure) + "\n";
 
       Serial.print(currentPacket);
 
