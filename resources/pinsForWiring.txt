@@ -10,13 +10,15 @@ A4 is BMP280 blue wire
 A5 is BMP280 yellow wire
 
 #GPS
+-- ORIENTATION --
+GPS front is side with light on it, back is side with UBlox chip (square thingy)
 -- On arduino --
-The 2nd GND on the Arduino goes to the yellow wire on GPS
-VBUS (5V) goes to red wire on GPS
-D7 goes to green wire on GPS
-D8 goes to white wire on GPS
+3rd pin from the right of GPS goes to D7
+4th pin from the right of GPS goes to D8
+LEAVE 5TH PIN UNCONNECTED!!!
 -- On breadboard --
-GND goes to black wire on GPS
+VIN (3.3V) goes to rightmost pin of GPS
+GND goes to 2nd pin from the right of GPS
 
 #DHT22
 -- ORIENTATION --
