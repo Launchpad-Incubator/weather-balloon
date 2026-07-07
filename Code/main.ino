@@ -44,6 +44,7 @@ unsigned long last_time = 0;
 
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
+Adafruit_ADS1115 ads;
 TinyGPSPlus gps;
 
 void setBuiltInLED(SystemState state) {
@@ -69,6 +70,8 @@ SensorReadings readSensors() {
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
   int rawWind = analogRead(A7);
+
+  int16_t adsRawWind = ads.readADC_SingleEnded(0);
 
   SensorReadings result;
 
