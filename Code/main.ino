@@ -68,31 +68,80 @@ SensorReadings readSensors() {
   float bmpTemp = bmp.readTemperature();
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
-
-  if (isnan(dhtTemp) || isnan(bmpTemp) || isnan(humidity) || isnan(pressure)) {
-    currentState = READ_ERROR;
-    SensorReadings errResult = { ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL, ERR_VAL };
-    return errResult;
-  }
-
-  float hectoPascals = (pressure / 100.0);
+  int rawWind = analogRead(A0);
 
   SensorReadings result;
-  result.DHT_temp = dhtTemp;
-  result.BMP_temp = bmpTemp;
-  result.humidity = humidity;
-  result.pressure = hectoPascals;
+
+  if (isnan(dhtTemp)) {
+    currentState = READ_ERROR;
+    result.DHT_temp = ERR_VAL;
+  } else {
+    result.DHT_temp = dhtTemp;
+  }
+
+  if (isnan(bmpTemp)) {
+    currentState = READ_ERROR;
+    result.BMP_temp = ERR_VAL;
+  } else {
+    result.BMP_temp = bmpTemp;
+  }
+
+  if (isnan(humidity)) {
+    currentState = READ_ERROR;
+    result.humidity = ERR_VAL;
+  } else {
+    result.humidity = humidity;
+  }
+
+  if (isnan(pressure)) {
+    currentState = READ_ERROR;
+    result.pressure = ERR_VAL;
+  } else {
+    float hectoPascals = (pressure / 100.0);
+    result.pressure = hectoPascals;
+  }
+
+  if (isnan(rawWind)) { 
+    currentState = READ_ERROR; 
+    result.wind_speed = ERR_VAL; 
+  } else { 
+    float windVolts = ((float)rawWind * 3.3) / 4095.0; 
+    float zeroWind_V = 1.3692; 
+    float windMPH = 0.0; 
+    
+    float activeTempCelsius = ERR_VAL;
+
+    if (result.BMP_temp != ERR_VAL) {
+      activeTempCelsius = result.BMP_temp;
+    } else if (result.DHT_temp != ERR_VAL) {
+      activeTempCelsius = result.DHT_temp;
+    }
+
+    if (activeTempCelsius != ERR_VAL) {
+      float tempKelvin = activeTempCelsius + 273.15; 
+      
+      if (tempKelvin > 0.0) { 
+        windMPH = pow((((windVolts - zeroWind_V) / (3.038517 * pow(tempKelvin, 0.115157))) / 0.087288), 3.009364); 
+      }
+    } else {
+      windMPH = ERR_VAL;
+      Serial.println("[Wind Error] Both BMP280 and DHT22 are dead. Wind calculation impossible.");
+    }
+    
+    if (windMPH != ERR_VAL && (windVolts <= zeroWind_V || isnan(windMPH) || windMPH < 0.0)) { 
+      windMPH = 0.0; 
+    } 
+    result.wind_speed = windMPH; 
+  }
 
   if (gps.location.isValid()) {
     result.latitude = gps.location.lat();
     result.longitude = gps.location.lng();
-    result.wind_speed = gps.speed.mps();
     result.wind_dir = fmod(gps.course.deg() + 180, 360);
     currentState = SYSTEM_OK;
   } else {
     result.latitude = ERR_VAL;
     result.longitude = ERR_VAL;
-    result.wind_speed = 0;
     result.wind_dir = 0;
     currentState = READ_ERROR;
   }
@@ -182,7 +231,6 @@ void setup() {
     Serial.println("BMP not found!");
     currentState = HARDWARE_FIX;
     setBuiltInLED(HARDWARE_FIX);
-    while (1) delay(10);
   }
 
   Serial1.setRxBufferSize(1024);
@@ -209,6 +257,8 @@ void setup() {
     1,
     NULL,
     0);
+
+    analogReadResolution(12);
 }
 
 int WindGust = 0;
@@ -237,25 +287,62 @@ String giveInternalTime() {
 }
 
 String formatTemp(float tempCelsius) {
-  int tempRounded = (int)round(tempCelsius * 1.8 + 32);
-  char buffer[5];
-  sprintf(buffer, "%03d", tempRounded % 1000);
-  return String(buffer);
-}
+  if (tempCelsius == ERR_VAL) return "999";
 
-String formatPressure(float pressure) {
-  int pressureRounded = (int)round(pressure * 10);
-  char buffer[7];
-  sprintf(buffer, "%05d", pressureRounded % 100000);
-  return String(buffer);
-}
+  int tempRounded = (int)round(tempCelsius * 1.8 + 32); 
+  char buffer[16];
+  sprintf(buffer, "%03d", tempRounded % 1000); 
+  return String(buffer); 
+} 
+
+String formatPressure(float pressure) { 
+  if (pressure == ERR_VAL) return "99999";
+
+  int pressureRounded = (int)round(pressure * 10); 
+  char buffer[16];
+  sprintf(buffer, "%05d", pressureRounded % 100000); 
+  return String(buffer); 
+} 
 
 String formatHumidity(float humidity) {
-  int humidityRounded = (int)round(humidity);
-  char buffer[4];
-  sprintf(buffer, "%02d", humidityRounded % 100);
+  if (humidity == ERR_VAL) return "99";
+
+  int humidityRounded = (int)round(humidity); 
+  char buffer[16];
+  sprintf(buffer, "%02d", humidityRounded % 100); 
+  return String(buffer); 
+} 
+
+String formatWindSpeed(double rawSpeedMs) {
+  double speedMph = rawSpeedMs * 2.23694; 
+
+  int roundedSpeed = (int)(speedMph + 0.5);
+
+  if (roundedSpeed < 0) roundedSpeed = 0;
+  if (roundedSpeed > 999) roundedSpeed = 999;
+
+  char buffer[6]; 
+
+  sprintf(buffer, "%03d", roundedSpeed);
+
   return String(buffer);
 }
+
+String formatWindDir(double rawHeading) {
+  int heading = (int)(rawHeading + 0.5);
+
+  heading = heading % 360;
+  if (heading < 0) {
+    heading += 360;
+  }
+
+  char buffer[6];
+
+  sprintf(buffer, "%03d", heading);
+
+  return String(buffer);
+}
+
 
 unsigned long lastTime = 0;
 const unsigned long interval = 100;
@@ -292,58 +379,62 @@ void loop() {
   if (millis() - lastTime >= interval) {
     lastTime = millis();
     SensorReadings data = readSensors();
-    setBuiltInLED(currentState);
 
     if (data.wind_speed > WindGust) {
       WindGust = data.wind_speed;
     }
 
-    if (currentState == SYSTEM_OK) {
-      if (gps.location.isValid()) {
-      } else {
-        Serial.println("gps is looking for satelites :O (" + String(gps.satellites.value()) + " satellites found)");
-        currentState = READ_ERROR;
-      }
-    
+    if (!gps.location.isValid()) {
+      Serial.println("gps is looking for satelites :O (" + String(gps.satellites.value()) + " satellites found)");
+      currentState = READ_ERROR;
+    }
 
-      String currentPacket = "@";
-      if (gps.location.isValid()) {
-        int latDeg = (int)data.latitude;
-        double latMin = (data.latitude - latDeg) * 60.0;
-        char latStr[9];
-        sprintf(latStr, "%02d%05.2f%c", abs(latDeg), fabs(latMin), (latDeg >= 0) ? 'N' : 'S');
 
-        int lngDeg = (int)data.longitude;
-        double lngMin = (data.longitude - lngDeg) * 60.0;
-        char lngStr[10];
-        sprintf(lngStr, "%03d%05.2f%c", abs(lngDeg), fabs(lngMin), (lngDeg >= 0) ? 'E' : 'W');
+    String currentPacket = "@" + giveInternalTime();
+    if (gps.location.isValid()) {
+      int latDeg = (int)data.latitude;
+      double latMin = (fabs(data.latitude) - abs(latDeg)) * 60.0;
 
-        currentPacket += String(latStr) + "/" + String(lngStr) + "_";
-      } else {
-        currentPacket += "0000.00N/00000.00W_";
-      }
+      char latStr[16];
+      sprintf(latStr, "%02d%05.2f%c", abs(latDeg), latMin, (data.latitude >= 0) ? 'N' : 'S');
 
-      currentPacket += giveInternalTime() + formatTemp(data.BMP_temp) + "h" + formatHumidity(data.humidity) + "b" + formatPressure(data.pressure) + "\n";
+      int lngDeg = (int)data.longitude;
+      double lngMin = (fabs(data.longitude) - abs(lngDeg)) * 60.0;
 
-      Serial.print(currentPacket);
+      char lngStr[16];
+      sprintf(lngStr, "%03d%05.2f%c", abs(lngDeg), lngMin, (data.longitude >= 0) ? 'E' : 'W');
 
-      if (packetCounter < BATCH_SIZE) {
-        packetBatch[packetCounter] = currentPacket;
-        packetCounter++;
-      }
-      if (packetCounter >= BATCH_SIZE) {
-        Serial.println("\nSending batch");
-
-        String fullBatch = "";
-        for (int i = 0; i < BATCH_SIZE; i++) {
-          fullBatch += packetBatch[i];
-        }
-        //send batch here
-
-        packetCounter = 0;
-      }
+      currentPacket += String(latStr) + "/" + String(lngStr) + "_";
     } else {
+      currentPacket += "0000.00N/00000.00W_";
+    }
+
+    currentPacket += formatWindDir(data.wind_dir) + "/" + formatWindSpeed(data.wind_speed) + "t" + formatTemp(data.BMP_temp) + "h" + formatHumidity(data.humidity) + "b" + formatPressure(data.pressure) + "\n";
+
+    Serial.print(currentPacket);
+
+    if (packetCounter < BATCH_SIZE) {
+      packetBatch[packetCounter] = currentPacket;
+      packetCounter++;
+    }
+    if (packetCounter >= BATCH_SIZE) {
+      Serial.println("\nSending batch");
+
+      String fullBatch = "";
+      for (int i = 0; i < BATCH_SIZE; i++) {
+        fullBatch += packetBatch[i];
+      }
+      //send batch here
+
+      packetCounter = 0;
+    }
+    if (currentState == HARDWARE_FIX) {
       Serial.println("check wiring and whether sensors are on");
     }
+    if (currentState == READ_ERROR) {
+      Serial.println("error reading sensors");
+    }
+
+    setBuiltInLED(currentState);
   }
 }
