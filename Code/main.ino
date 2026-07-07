@@ -421,6 +421,7 @@ void loop() {
       Serial.println("\nSending batch");
 
       String fullBatch = "";
+      fullBatch.reserve(3000);
       for (int i = 0; i < BATCH_SIZE; i++) {
         fullBatch += packetBatch[i];
       }
