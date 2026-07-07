@@ -1,0 +1,8 @@
+A5 goes to BMP280 SCL and then gets chained into MCP4728 SCL
+A4 goes to BMP280 SDA and then gets chained into MCP4728 SDA
+One of the arduino GND's goes to all the GND on each component
+The arduino's 3.3V goes to all the VCC on each component EXCEPT the Rev P 6 Wind Sensor
+
+Rev P 6 Wind Sensor MUST have a separate 9V battery with it, GND of the battery (negative) goes to Rev P 6 GND, VCC of battery (positive) goes to Rev P 6 VCC
+A7 goes to Rev P 6 Wind Sensor OUT (output)
+
