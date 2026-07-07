@@ -68,7 +68,7 @@ SensorReadings readSensors() {
   float bmpTemp = bmp.readTemperature();
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
-  int rawWind = analogRead(A0);
+  int rawWind = analogRead(A7);
 
   SensorReadings result;
 
@@ -128,9 +128,9 @@ SensorReadings readSensors() {
       Serial.println("[Wind Error] Both BMP280 and DHT22 are dead. Wind calculation impossible.");
     }
     
-    if (windMPH != ERR_VAL && (windVolts <= zeroWind_V || isnan(windMPH) || windMPH < 0.0)) { 
+    if (windVolts <= (zeroWind_V + 0.05) || isnan(windMPH) || windMPH < 0.0) { 
       windMPH = 0.0; 
-    } 
+    }
     result.wind_speed = windMPH; 
   }
 
@@ -266,7 +266,7 @@ int WindGust = 0;
 void printInternalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    Serial.println("Time not set yet (sync with NTP first)");
+    Serial.println("Time not set yet (sync with NTP first or wait for GPS lock)");
     return;
   }
   Serial.print(&timeinfo, "%d%H%Mz");
@@ -345,9 +345,9 @@ String formatWindDir(double rawHeading) {
 
 
 unsigned long lastTime = 0;
-const unsigned long interval = 100;
+const unsigned long interval = 500;
 
-const int BATCH_SIZE = 25;
+const int BATCH_SIZE = 50;
 String packetBatch[BATCH_SIZE];
 int packetCounter = 0;
 
