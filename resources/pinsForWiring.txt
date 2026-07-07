@@ -30,3 +30,12 @@ GND goes to Pin 4 on DHT22
 Place a 10K Ohm resistor between pins 1 & 2, but on the same row, so the wires are still there, but there is a connection between both
 -- On arduino --
 D2 goes to Pin 2 on the DHT22
+
+#REV P
+-- PINS GO LEFT TO RIGHT --
+
+-- on seperate 9v battery --
+1ST PIN GOES TO GND
+2ND PIN GOES TO VCC
+-- on arduino --
+3RD PIN GOES TO A7 (DATA)
