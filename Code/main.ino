@@ -44,7 +44,6 @@ unsigned long last_time = 0;
 
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
-Adafruit_ADS1115 ads;
 TinyGPSPlus gps;
 
 void setBuiltInLED(SystemState state) {
@@ -70,8 +69,6 @@ SensorReadings readSensors() {
   float humidity = dht.readHumidity();
   float pressure = bmp.readPressure();
   int rawWind = analogRead(A7);
-
-  int16_t adsRawWind = ads.readADC_SingleEnded(0);
 
   SensorReadings result;
 
@@ -104,38 +101,42 @@ SensorReadings readSensors() {
     result.pressure = hectoPascals;
   }
 
-  if (isnan(rawWind)) { 
-    currentState = READ_ERROR; 
-    result.wind_speed = ERR_VAL; 
-  } else { 
-    float windVolts = ((float)rawWind * 3.3) / 4095.0; 
-    float zeroWind_V = 1.3692; 
-    float windMPH = 0.0; 
-    
-    float activeTempCelsius = ERR_VAL;
-
-    if (result.BMP_temp != ERR_VAL) {
-      activeTempCelsius = result.BMP_temp;
-    } else if (result.DHT_temp != ERR_VAL) {
-      activeTempCelsius = result.DHT_temp;
-    }
-
-    if (activeTempCelsius != ERR_VAL) {
-      float tempKelvin = activeTempCelsius + 273.15; 
+  if (isnan(rawWind)) {
+    currentState = READ_ERROR;
+    result.wind_speed = ERR_VAL;
+  } else {
+      float windVolts = ((float)rawWind * 3.3) / 4095.0;
       
-      if (tempKelvin > 0.0) { 
-        windMPH = pow((((windVolts - zeroWind_V) / (3.038517 * pow(tempKelvin, 0.115157))) / 0.087288), 3.009364); 
+      // Resetting back to your original baseline code
+      float zeroWind_V = 1.3692; 
+      float windMPH = 0.0;
+      float activeTempCelsius = ERR_VAL;
+
+      if (result.BMP_temp != ERR_VAL) {
+          activeTempCelsius = result.BMP_temp;
+      } else if (result.DHT_temp != ERR_VAL) {
+          activeTempCelsius = result.DHT_temp;
       }
-    } else {
-      windMPH = ERR_VAL;
-      Serial.println("[Wind Error] Both BMP280 and DHT22 are dead. Wind calculation impossible.");
-    }
-    
-    if (windVolts <= (zeroWind_V + 0.05) || isnan(windMPH) || windMPH < 0.0) { 
-      windMPH = 0.0; 
-    }
-    result.wind_speed = windMPH; 
+
+      if (activeTempCelsius != ERR_VAL) {
+          float tempKelvin = activeTempCelsius + 273.15;
+          if (tempKelvin > 0.0) {
+              // Your original exact math equation
+              windMPH = pow((((windVolts - zeroWind_V) / (3.038517 * pow(tempKelvin, 0.115157))) / 0.087288), 3.009364);
+          }
+      } else {
+          windMPH = ERR_VAL;
+          Serial.println("[Wind Error] Both BMP280 and DHT22 are dead. Wind calculation impossible.");
+      }
+
+      // Lowering your old threshold clamp to 0.0 so your data doesn't get wiped out!
+      if (isnan(windMPH) || windMPH < 0.0) {
+          windMPH = 0.0;
+      }
+      result.wind_speed = windMPH;
   }
+
+
 
   if (gps.location.isValid()) {
     result.latitude = gps.location.lat();
@@ -201,6 +202,11 @@ void WiFiReconnectorTask(void* pvParameters) {
       Serial.println("[WiFi Task] Connection lost. Retrying...");
 
       for (int i = 0; i < 2; i++) {
+        struct tm timeinfo;
+
+        if (getLocalTime(&timeinfo)) {
+          break;
+        }
         WiFi.begin(networks[i][0], networks[i][1]);
         unsigned long start = millis();
 
@@ -210,14 +216,19 @@ void WiFiReconnectorTask(void* pvParameters) {
 
         if (WiFi.status() == WL_CONNECTED) {
           Serial.println("[WiFi Task] Connected!");
+          vTaskDelay(100 / portTICK_PERIOD_MS);
           configTime(0, 0, ntpServer);
           break;
         }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
       }
     }
     vTaskDelay(30000 / portTICK_PERIOD_MS);
   }
 }
+
+const int BATCH_SIZE = 25;
+String packetBatch[BATCH_SIZE];
 
 void setup() {
   Serial.begin(115200);
@@ -259,7 +270,11 @@ void setup() {
     NULL,
     1,
     NULL,
-    0);
+    tskNO_AFFINITY);
+
+    for (int i = 0; i < BATCH_SIZE; i++) {
+      packetBatch[i].reserve(100); 
+    }
 
     analogReadResolution(12);
 }
@@ -350,8 +365,6 @@ String formatWindDir(double rawHeading) {
 unsigned long lastTime = 0;
 const unsigned long interval = 500;
 
-const int BATCH_SIZE = 50;
-String packetBatch[BATCH_SIZE];
 int packetCounter = 0;
 
 void loop() {
