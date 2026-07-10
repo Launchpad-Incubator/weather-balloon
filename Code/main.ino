@@ -5,6 +5,7 @@
 #include <WiFi.h>
 #include "time.h"
 #include <TinyGPSPlus.h>
+#include <Adafruit_MCP4728.h>
 #include <math.h>
 
 #define DHT22_PIN D2
@@ -44,6 +45,7 @@ unsigned long last_time = 0;
 
 DHT dht(DHT22_PIN, DHTTYPE);
 Adafruit_BMP280 bmp;
+Adafruit_MCP4728 mcp;
 TinyGPSPlus gps;
 
 void setBuiltInLED(SystemState state) {
@@ -276,6 +278,16 @@ void setup() {
       packetBatch[i].reserve(100); 
     }
 
+    if (!mcp.begin(0x64)) {
+      Serial.println("dac missing");
+      currentState = HARDWARE_FIX;
+      while (1);
+    }
+
+    Wire.setClock(100000L);
+    
+    mcp.setChannelValue(MCP4728_CHANNEL_A, 0, MCP4728_VREF_INTERNAL, MCP4728_GAIN_2X, MCP4728_PD_MODE_NORMAL, false);
+
     analogReadResolution(12);
 }
 
@@ -441,7 +453,16 @@ void loop() {
       for (int i = 0; i < BATCH_SIZE; i++) {
         fullBatch += packetBatch[i];
       }
-      //send batch here
+      
+      for (int i = 0; i < fullBatch.length(); i++) {
+        char currentLetter = fullBatch.charAt(i);
+        
+        byte currentByte = (byte)currentLetter;
+        int dacValue = currentByte * 16;
+        
+        mcp.setChannelValue(MCP4728_CHANNEL_A, dacValue);
+        delayMicroseconds(400);
+      }
 
       packetCounter = 0;
     }
