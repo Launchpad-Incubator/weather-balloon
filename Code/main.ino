@@ -285,8 +285,6 @@ void setup() {
     }
 
     Wire.setClock(100000L);
-    
-    mcp.setChannelValue(MCP4728_CHANNEL_A, 0, MCP4728_VREF_INTERNAL, MCP4728_GAIN_2X, MCP4728_PD_MODE_NORMAL, false);
 
     analogReadResolution(12);
 }
@@ -456,12 +454,27 @@ void loop() {
       
       for (int i = 0; i < fullBatch.length(); i++) {
         char currentLetter = fullBatch.charAt(i);
-        
         byte currentByte = (byte)currentLetter;
-        int dacValue = currentByte * 16;
-        
-        mcp.setChannelValue(MCP4728_CHANNEL_A, dacValue);
-        delayMicroseconds(400);
+
+        int dacValue = map(currentByte, 32, 126, 2200, 4095);
+
+        mcp.setChannelValue(
+          MCP4728_CHANNEL_A, 
+          dacValue, 
+          MCP4728_VREF_VDD,   
+          MCP4728_GAIN_2X, 
+          MCP4728_PD_MODE_NORMAL, 
+          true                
+        );
+
+        // CRITICAL STEP: Read back what the DAC registers actually hold right now
+  int activeRegisterValue = mcp.getChannelValue(MCP4728_CHANNEL_A);
+  
+  // Print verification telemetry
+  Serial.printf("[DAC-READ] Processing: '%c' | Intended: %4d | DAC Active Register: %4d\n", 
+                currentLetter, dacValue, activeRegisterValue);
+
+        vTaskDelay(8.2);
       }
 
       packetCounter = 0;
