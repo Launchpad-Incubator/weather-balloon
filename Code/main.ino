@@ -27,6 +27,9 @@ enum SystemState {
 
 SystemState currentState = BOOTING;
 
+//float measuredZeroWind_V = 0.2;
+
+
 struct SensorReadings {
   float DHT_temp;
   float BMP_temp;
@@ -110,25 +113,13 @@ SensorReadings readSensors() {
       float windVolts = ((float)rawWind * 3.3) / 4095.0;
       
       // Resetting back to your original baseline code
-      float zeroWind_V = 1.3692; 
+      float zeroWind_V = 1.29; 
       float windMPH = 0.0;
-      float activeTempCelsius = ERR_VAL;
 
-      if (result.BMP_temp != ERR_VAL) {
-          activeTempCelsius = result.BMP_temp;
-      } else if (result.DHT_temp != ERR_VAL) {
-          activeTempCelsius = result.DHT_temp;
-      }
-
-      if (activeTempCelsius != ERR_VAL) {
-          float tempKelvin = activeTempCelsius + 273.15;
-          if (tempKelvin > 0.0) {
-              // Your original exact math equation
-              windMPH = pow((((windVolts - zeroWind_V) / (3.038517 * pow(tempKelvin, 0.115157))) / 0.087288), 3.009364);
-          }
+      if (windVolts > zeroWind_V) {
+        windMPH = (windVolts - zeroWind_V) * 33.3; 
       } else {
-          windMPH = ERR_VAL;
-          Serial.println("[Wind Error] Both BMP280 and DHT22 are dead. Wind calculation impossible.");
+          windMPH = 0.0; 
       }
 
       // Lowering your old threshold clamp to 0.0 so your data doesn't get wiped out!
@@ -284,6 +275,22 @@ void setup() {
       while (1);
     }
 
+    //Serial.println("Calibrating wind sensor baseline... keep air still!");
+    //long totalRawWind = 0;
+    //for (int i = 0; i < 20; i++) {
+    //  totalRawWind += analogRead(A7);
+    //  delay(100);
+    //}
+    //float avgRawWind = (float)totalRawWind / 20.0;
+    //measuredZeroWind_V = (avgRawWind * 3.3) / 4095.0;
+
+    //measuredZeroWind_V += 0.05; 
+    
+    //Serial.print("Wind baseline calibration locked at: ");
+    //Serial.print(measuredZeroWind_V);
+    //Serial.println(" Volts.");
+
+
     Wire.setClock(100000L);
 
     analogReadResolution(12);
@@ -342,7 +349,7 @@ String formatHumidity(float humidity) {
 } 
 
 String formatWindSpeed(double rawSpeedMs) {
-  double speedMph = rawSpeedMs * 2.23694; 
+  double speedMph = rawSpeedMs; 
 
   int roundedSpeed = (int)(speedMph + 0.5);
 
@@ -466,17 +473,7 @@ void loop() {
           MCP4728_PD_MODE_NORMAL, 
           true                
         );
-
-        // CRITICAL STEP: Read back what the DAC registers actually hold right now
-  int activeRegisterValue = mcp.getChannelValue(MCP4728_CHANNEL_A);
-  
-  // Print verification telemetry
-  Serial.printf("[DAC-READ] Processing: '%c' | Intended: %4d | DAC Active Register: %4d\n", 
-                currentLetter, dacValue, activeRegisterValue);
-
-        vTaskDelay(8.2);
       }
-
       packetCounter = 0;
     }
     if (currentState == HARDWARE_FIX) {
